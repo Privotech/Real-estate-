@@ -1,0 +1,8 @@
+{
+  "name": "Nigeria Property Centre",
+  "description": "Nigeria's premier real estate and property marketplace. Discover verified houses, flats, land, and short let properties for sale and rent in Lagos, Abuja, Port Harcourt, and across Nigeria.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
