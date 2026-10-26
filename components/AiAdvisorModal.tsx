@@ -78,7 +78,7 @@ export function AiAdvisorModal({ isOpen, onClose }: AiAdvisorModalProps) {
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <span>Nigeria Real Estate AI Advisor</span>
                 <span className="text-[10px] font-semibold bg-emerald-800 text-emerald-100 px-2 py-0.5 rounded">
-                  Gemini 3.8 Flash
+                  AI Market Engine
                 </span>
               </h3>
               <p className="text-xs text-slate-300">

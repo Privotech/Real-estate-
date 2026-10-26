@@ -20,6 +20,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { Property, formatNaira, formatUSD } from '@/lib/property-data';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PropertyDetailModalProps {
   property: Property | null;
@@ -27,6 +28,7 @@ interface PropertyDetailModalProps {
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onClose: () => void;
+  onOpenJVModal?: () => void;
 }
 
 export function PropertyDetailModal({
@@ -35,7 +37,9 @@ export function PropertyDetailModal({
   isFavorite,
   onToggleFavorite,
   onClose,
+  onOpenJVModal,
 }: PropertyDetailModalProps) {
+  const { user, scheduleInspection } = useAuth();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<'inspection' | 'mortgage' | 'ai-valuation'>('inspection');
 
@@ -43,10 +47,14 @@ export function PropertyDetailModal({
   const [inspectionType, setInspectionType] = useState<'physical' | 'virtual'>('physical');
   const [inspectionDate, setInspectionDate] = useState('2026-10-25');
   const [inspectionTime, setInspectionTime] = useState('10:00 AM - 12:00 PM');
-  const [buyerName, setBuyerName] = useState('');
-  const [buyerPhone, setBuyerPhone] = useState('');
-  const [buyerEmail, setBuyerEmail] = useState('');
+  const [buyerName, setBuyerName] = useState(user?.fullName || '');
+  const [buyerPhone, setBuyerPhone] = useState(user?.phone || '');
+  const [buyerEmail, setBuyerEmail] = useState(user?.email || '');
   const [isBooked, setIsBooked] = useState(false);
+
+  // Short-let stay booking state
+  const [shortLetNights, setShortLetNights] = useState<number>(3);
+  const [shortLetGuests, setShortLetGuests] = useState<number>(2);
 
   // Mortgage Calculator state
   const [downPaymentPercent, setDownPaymentPercent] = useState(20);
@@ -74,10 +82,22 @@ export function PropertyDetailModal({
         (Math.pow(1 + monthlyRate, numberOfPayments) - 1)
       : principal / numberOfPayments;
 
-  const handleBookInspection = (e: React.FormEvent) => {
+  const handleBookInspection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyerName || !buyerPhone) return;
     setIsBooked(true);
+
+    if (property) {
+      await scheduleInspection({
+        propertyId: property.id,
+        propertyTitle: property.title,
+        propertyLocation: `${property.area}, ${property.state}`,
+        preferredDate: inspectionDate,
+        preferredTime: inspectionTime,
+        type: inspectionType === 'virtual' ? 'VIRTUAL_WHATSAPP' : 'PHYSICAL',
+        notes: `Contact: ${buyerName} (${buyerPhone})`,
+      });
+    }
   };
 
   const handleFetchAiValuation = async () => {
@@ -353,7 +373,11 @@ export function PropertyDetailModal({
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  Mortgage Calc
+                  {property.category === 'short-let'
+                    ? 'Stay & Rates'
+                    : property.category === 'joint-venture'
+                    ? 'JV Feasibility'
+                    : 'Mortgage Calc'}
                 </button>
                 <button
                   type="button"
@@ -495,73 +519,202 @@ export function PropertyDetailModal({
                 </div>
               )}
 
-              {/* Tab 2: Mortgage Calculator */}
+              {/* Tab 2: Mortgage / Short-Let / JV Custom Module */}
               {activeTab === 'mortgage' && (
-                <div className="space-y-3 text-xs">
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <span className="text-slate-500 block text-[11px]">Estimated Monthly Repayment:</span>
-                    <span className="text-xl font-bold font-mono text-emerald-900 tabular-nums">
-                      {formatNaira(Math.round(monthlyPaymentNaira))}
-                    </span>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">
-                      Based on {loanTermYears} yrs at {interestRate}% p.a.
-                    </span>
-                  </div>
+                <div>
+                  {property.category === 'short-let' ? (
+                    <div className="space-y-3 text-xs">
+                      <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-600 font-medium">Daily Rate:</span>
+                          <span className="text-base font-bold font-mono text-emerald-900">
+                            {formatNaira(property.priceNaira)} / night
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-emerald-800 mt-1 flex items-center gap-1 font-medium">
+                          ⚡ Guaranteed 24/7 Electricity · High-Speed WiFi · Daily Housekeeping
+                        </div>
+                      </div>
 
-                  <div>
-                    <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                      <span>Down Payment: {downPaymentPercent}%</span>
-                      <span className="font-mono text-slate-900">
-                        {formatNaira(Math.round((property.priceNaira * downPaymentPercent) / 100))}
-                      </span>
+                      <div>
+                        <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                          <span>Duration of Stay:</span>
+                          <span className="font-mono text-slate-900">{shortLetNights} Nights</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="30"
+                          step="1"
+                          value={shortLetNights}
+                          onChange={(e) => setShortLetNights(Number(e.target.value))}
+                          className="w-full accent-emerald-800 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                          <span>Guests:</span>
+                          <span className="font-mono text-slate-900">{shortLetGuests} Persons</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="6"
+                          step="1"
+                          value={shortLetGuests}
+                          onChange={(e) => setShortLetGuests(Number(e.target.value))}
+                          className="w-full accent-emerald-800 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5 text-[11px]">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Accommodation ({shortLetNights} nights)</span>
+                          <span className="font-mono font-semibold text-slate-800">
+                            {formatNaira(property.priceNaira * shortLetNights)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Refundable Caution Deposit</span>
+                          <span className="font-mono font-semibold text-slate-800">₦50,000</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Cleaning & Service Fee</span>
+                          <span className="font-mono font-semibold text-slate-800">₦10,000</span>
+                        </div>
+                        <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-xs text-slate-900">
+                          <span>Total Payable</span>
+                          <span className="font-mono text-emerald-800">
+                            {formatNaira(property.priceNaira * shortLetNights + 60000)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <a
+                        href={`https://wa.me/${property.agent.whatsapp}?text=${encodeURIComponent(
+                          `Hello ${property.agent.name}, I would like to reserve the short let: "${property.title}" in ${property.area} for ${shortLetNights} nights (${shortLetGuests} guests). Estimated Total: ${formatNaira(property.priceNaira * shortLetNights + 60000)}. Please confirm dates availability.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold rounded-lg transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Reserve Dates on WhatsApp</span>
+                      </a>
                     </div>
-                    <input
-                      type="range"
-                      min="10"
-                      max="50"
-                      step="5"
-                      value={downPaymentPercent}
-                      onChange={(e) => setDownPaymentPercent(Number(e.target.value))}
-                      className="w-full accent-emerald-800 cursor-pointer"
-                    />
-                  </div>
+                  ) : property.category === 'joint-venture' ? (
+                    <div className="space-y-3 text-xs">
+                      <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
+                        <span className="text-slate-600 block text-[11px]">JV Proposal Details:</span>
+                        <div className="text-base font-bold font-mono text-emerald-950 mt-0.5">
+                          50:50 Sharing Ratio
+                        </div>
+                        <div className="text-[11px] text-slate-600 mt-1">
+                          Landowner contributes {property.landSizeSqm?.toLocaleString() || '2,500'} SQM with clean title.
+                        </div>
+                      </div>
 
-                  <div>
-                    <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                      <span>Loan Term: {loanTermYears} Years</span>
+                      <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Land Title:</span>
+                          <span className="font-semibold text-slate-900">{property.titleDocument}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Land Size:</span>
+                          <span className="font-mono font-semibold text-slate-900">{property.landSizeSqm || 2500} SQM</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Required Premium:</span>
+                          <span className="font-mono font-bold text-emerald-800">₦350,000,000</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Facilitators Fee:</span>
+                          <span className="font-mono font-semibold text-slate-900">10%</span>
+                        </div>
+                      </div>
+
+                      {onOpenJVModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onOpenJVModal();
+                          }}
+                          className="w-full py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold rounded-lg transition-colors cursor-pointer text-xs flex items-center justify-center gap-1.5"
+                        >
+                          <span>Open Full JV Feasibility Model</span>
+                        </button>
+                      )}
                     </div>
-                    <input
-                      type="range"
-                      min="5"
-                      max="25"
-                      step="1"
-                      value={loanTermYears}
-                      onChange={(e) => setLoanTermYears(Number(e.target.value))}
-                      className="w-full accent-emerald-800 cursor-pointer"
-                    />
-                  </div>
+                  ) : (
+                    <div className="space-y-3 text-xs">
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <span className="text-slate-500 block text-[11px]">Estimated Monthly Repayment:</span>
+                        <span className="text-xl font-bold font-mono text-emerald-900 tabular-nums">
+                          {formatNaira(Math.round(monthlyPaymentNaira))}
+                        </span>
+                        <span className="text-[11px] text-slate-500 block mt-0.5">
+                          Based on {loanTermYears} yrs at {interestRate}% p.a.
+                        </span>
+                      </div>
 
-                  <div>
-                    <div className="flex justify-between font-semibold text-slate-700 mb-1">
-                      <span>Annual Interest Rate: {interestRate}%</span>
-                      <span className="text-[11px] text-slate-400">Typical NG Commercial Rate</span>
+                      <div>
+                        <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                          <span>Down Payment: {downPaymentPercent}%</span>
+                          <span className="font-mono text-slate-900">
+                            {formatNaira(Math.round((property.priceNaira * downPaymentPercent) / 100))}
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="10"
+                          max="50"
+                          step="5"
+                          value={downPaymentPercent}
+                          onChange={(e) => setDownPaymentPercent(Number(e.target.value))}
+                          className="w-full accent-emerald-800 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                          <span>Loan Term: {loanTermYears} Years</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="5"
+                          max="25"
+                          step="1"
+                          value={loanTermYears}
+                          onChange={(e) => setLoanTermYears(Number(e.target.value))}
+                          className="w-full accent-emerald-800 cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between font-semibold text-slate-700 mb-1">
+                          <span>Annual Interest Rate: {interestRate}%</span>
+                          <span className="text-[11px] text-slate-400">Typical NG Commercial Rate</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="12"
+                          max="28"
+                          step="0.5"
+                          value={interestRate}
+                          onChange={(e) => setInterestRate(Number(e.target.value))}
+                          className="w-full accent-emerald-800 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                        <p>
+                          *Loan availability is subject to applicant&apos;s credit score and primary mortgage institution terms in Nigeria (e.g. NMRC, Federal Mortgage Bank of Nigeria NHF).
+                        </p>
+                      </div>
                     </div>
-                    <input
-                      type="range"
-                      min="12"
-                      max="28"
-                      step="0.5"
-                      value={interestRate}
-                      onChange={(e) => setInterestRate(Number(e.target.value))}
-                      className="w-full accent-emerald-800 cursor-pointer"
-                    />
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-                    <p>
-                      *Loan availability is subject to applicant&apos;s credit score and primary mortgage institution terms in Nigeria (e.g. NMRC, Federal Mortgage Bank of Nigeria NHF).
-                    </p>
-                  </div>
+                  )}
                 </div>
               )}
 

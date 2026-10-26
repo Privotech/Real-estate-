@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SEEKER
+  AGENT
+  DEVELOPER
+  ADMIN
+}
+
+enum PropertyType {
+  FLAT_APARTMENT
+  DETACHED_DUPLEX
+  SEMI_DETACHED_DUPLEX
+  TERRACE
+  COMMERCIAL
+  LAND
+  SHORT_LET
+  OFF_PLAN
+}
+
+enum PropertyListingType {
+  SALE
+  RENT
+  SHORT_LET
+  JOINT_VENTURE
+}
+
+model User {
+  id               String              @id @default(uuid())
+  email            String              @unique
+  passwordHash     String
+  fullName         String
+  phone            String
+  role             Role                @default(SEEKER)
+  agencyName       String?
+  licenseNumber    String?             // e.g. LASRERA or ERCAAN registration
+  isVerified       Boolean             @default(false)
+  avatarUrl        String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  properties       Property[]          @relation("AgentProperties")
+  savedProperties  SavedProperty[]
+  inspections      InspectionRequest[]
+  propertyRequests PropertyRequest[]
+  propertyAlerts   PropertyAlert[]
+}
+
+model Property {
+  id             String              @id @default(uuid())
+  title          String
+  description    String
+  listingType    PropertyListingType
+  propertyType   PropertyType
+  price          Float
+  currency       String              @default("NGN")
+  state          String
+  city           String
+  neighborhood   String
+  address        String?
+  bedrooms       Int                 @default(0)
+  bathrooms      Int                 @default(0)
+  toilets        Int                 @default(0)
+  parkingSpaces  Int                 @default(0)
+  landSizeSqM    Float?
+  titleDoc       String              // e.g. "Governor's Consent", "C of O", "Gazette", "Deed of Assignment"
+  isVerified     Boolean             @default(false)
+  isFeatured     Boolean             @default(false)
+  images         String[]            // Array of property photo URLs
+  features       String[]            // e.g. "24/7 Power", "Swimming Pool", "CCTV"
+  serviceCharge  Float?
+  cautionDeposit Float?
+
+  agentId        String
+  agent          User                @relation("AgentProperties", fields: [agentId], references: [id], onDelete: Cascade)
+
+  savedBy        SavedProperty[]
+  inspections    InspectionRequest[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model SavedProperty {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+}
+
+model InspectionRequest {
+  id            String   @id @default(uuid())
+  userId        String
+  propertyId    String
+  preferredDate DateTime
+  preferredTime String
+  type          String   @default("PHYSICAL") // PHYSICAL or VIRTUAL_WHATSAPP
+  notes         String?
+  status        String   @default("PENDING") // PENDING, CONFIRMED, COMPLETED, CANCELLED
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model PropertyRequest {
+  id             String   @id @default(uuid())
+  userId         String
+  title          String
+  state          String
+  city           String
+  preferredAreas String
+  propertyType   String
+  budgetMin      Float
+  budgetMax      Float
+  bedrooms       Int?
+  urgency        String   @default("NORMAL")
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PropertyAlert {
+  id                String   @id @default(uuid())
+  userId            String?
+  name              String
+  category          String   @default("all")
+  state             String   @default("All States")
+  area              String   @default("All Areas")
+  propertyType      String   @default("All Types")
+  bedrooms          String   @default("any")
+  titleDocument     String   @default("All Titles")
+  maxPrice          Float    @default(1000000000)
+  keyword           String   @default("")
+  email             String
+  dailySummaryEmail Boolean  @default(true)
+  phone             String?
+  channelsEmail     Boolean  @default(true)
+  channelsPush      Boolean  @default(true)
+  channelsWhatsapp  Boolean  @default(false)
+  frequency         String   @default("daily")
+  isActive          Boolean  @default(true)
+  matchesCount      Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

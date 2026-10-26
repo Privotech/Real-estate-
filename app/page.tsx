@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   INITIAL_PROPERTIES,
   INITIAL_REQUESTS,
@@ -17,9 +17,16 @@ import { CompareModal } from '@/components/CompareModal';
 import { FavoritesDrawer } from '@/components/FavoritesDrawer';
 import { NigerianTitleGuide } from '@/components/NigerianTitleGuide';
 import { MarketTrends } from '@/components/MarketTrends';
+import { NeighborhoodExplorer } from '@/components/NeighborhoodExplorer';
 import { PropertyRequestsModal } from '@/components/PropertyRequestsModal';
 import { ClosingCostCalculatorModal } from '@/components/ClosingCostCalculatorModal';
 import { AgentDirectoryModal } from '@/components/AgentDirectoryModal';
+import { TitleSearchServiceModal } from '@/components/TitleSearchServiceModal';
+import { MortgagePreQualifierModal } from '@/components/MortgagePreQualifierModal';
+import { JointVentureModal } from '@/components/JointVentureModal';
+import { AuthModal } from '@/components/AuthModal';
+import { InspectionsModal } from '@/components/InspectionsModal';
+import { PropertyAlertModal } from '@/components/PropertyAlertModal';
 import { Footer } from '@/components/Footer';
 import {
   SlidersHorizontal,
@@ -32,6 +39,13 @@ import {
   TrendingUp,
   Calculator,
   Users,
+  ShieldCheck,
+  Search,
+  Heart,
+  BadgePercent,
+  Home,
+  Building2,
+  Bell,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -41,8 +55,17 @@ export default function HomePage() {
   // Master Seeker Requests List
   const [requests, setRequests] = useState<PropertyRequest[]>(INITIAL_REQUESTS);
 
-  // Currency selection: NGN vs USD
+  // Currency selection: NGN vs USD with localStorage persistence
   const [currency, setCurrency] = useState<'NGN' | 'USD'>('NGN');
+
+  const handleSetCurrency = (c: 'NGN' | 'USD') => {
+    setCurrency(c);
+    try {
+      localStorage.setItem('npc_currency_pref', c);
+    } catch {
+      // ignore
+    }
+  };
 
   // Search & Filter State
   const [category, setCategory] = useState<string>('all');
@@ -67,6 +90,38 @@ export default function HomePage() {
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState<boolean>(false);
   const [isClosingCalcOpen, setIsClosingCalcOpen] = useState<boolean>(false);
   const [isAgentDirectoryOpen, setIsAgentDirectoryOpen] = useState<boolean>(false);
+  const [isTitleSearchOpen, setIsTitleSearchOpen] = useState<boolean>(false);
+  const [isPreQualifierOpen, setIsPreQualifierOpen] = useState<boolean>(false);
+  const [isJVModalOpen, setIsJVModalOpen] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isInspectionsModalOpen, setIsInspectionsModalOpen] = useState<boolean>(false);
+  const [isPropertyAlertOpen, setIsPropertyAlertOpen] = useState<boolean>(false);
+  const [savedAlertsCount, setSavedAlertsCount] = useState<number>(0);
+
+  // Synchronize client-side currency preferences and fetch active alert count from NeonDB
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const saved = localStorage.getItem('npc_currency_pref');
+        if (saved === 'NGN' || saved === 'USD') {
+          setCurrency(saved);
+        }
+      } catch {
+        // ignore
+      }
+
+      // Fetch real-time alert count directly from NeonDB
+      fetch('/api/alerts')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && typeof data.count === 'number') {
+            setSavedAlertsCount(data.count);
+          }
+        })
+        .catch(() => {});
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Favorites & Compare IDs
   const [favoriteIds, setFavoriteIds] = useState<string[]>(['npc-lekki-001']);
@@ -215,19 +270,55 @@ export default function HomePage() {
     setSearchKeyword('');
   };
 
+  const activeFilterSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (selectedBedrooms !== 'any') parts.push(`${selectedBedrooms} Bed`);
+    if (selectedType !== 'All Types') parts.push(selectedType);
+    if (category !== 'all') {
+      const catMap: Record<string, string> = {
+        'for-sale': 'For Sale',
+        'for-rent': 'For Rent',
+        'short-let': 'Short Let',
+        land: 'Land Plots',
+        'joint-venture': 'Joint Venture',
+      };
+      parts.push(catMap[category] || category);
+    }
+    if (selectedArea !== 'All Areas') parts.push(`in ${selectedArea}`);
+    else if (selectedState !== 'All States') parts.push(`in ${selectedState}`);
+    if (maxPrice < 1000000000) parts.push(`under ₦${(maxPrice / 1000000).toFixed(0)}M`);
+    if (searchKeyword.trim()) parts.push(`"${searchKeyword}"`);
+    return parts.length > 0 ? parts.join(' · ') : 'All Current Listings';
+  }, [
+    category,
+    selectedState,
+    selectedArea,
+    selectedType,
+    selectedBedrooms,
+    maxPrice,
+    searchKeyword,
+  ]);
+
   const scrollToTrends = () => {
     const el = document.getElementById('market-trends-section');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleDistrictSelect = (state: string, areaName: string) => {
+    setSelectedState(state);
+    setSelectedArea(areaName);
+    const resultsElement = document.getElementById('listings-catalog');
+    if (resultsElement) resultsElement.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 pb-16 md:pb-0">
       {/* Top Bar Contract (1 Row, 3 Zones) */}
       <Navbar
         activeTab={category}
         setActiveTab={(cat) => setCategory(cat)}
         currency={currency}
-        setCurrency={setCurrency}
+        setCurrency={handleSetCurrency}
         favoritesCount={favoriteIds.length}
         compareCount={compareIds.length}
         onOpenFavorites={() => setIsFavoritesOpen(true)}
@@ -237,7 +328,12 @@ export default function HomePage() {
         onOpenRequests={() => setIsRequestsModalOpen(true)}
         onOpenClosingCalc={() => setIsClosingCalcOpen(true)}
         onOpenAgentDirectory={() => setIsAgentDirectoryOpen(true)}
+        onOpenTitleSearch={() => setIsTitleSearchOpen(true)}
+        onOpenPreQualifier={() => setIsPreQualifierOpen(true)}
+        onOpenJVModal={() => setIsJVModalOpen(true)}
         onScrollToTrends={scrollToTrends}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenInspections={() => setIsInspectionsModalOpen(true)}
       />
 
       <main className="flex-1">
@@ -326,6 +422,23 @@ export default function HomePage() {
                 </button>
               )}
 
+              {/* Property Alert Subscription Button */}
+              <button
+                onClick={() => setIsPropertyAlertOpen(true)}
+                className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-950 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300 rounded-lg transition-all shadow-2xs group cursor-pointer"
+                title="Subscribe to alerts for new listings matching these filters"
+              >
+                <Bell className="w-3.5 h-3.5 text-emerald-800 group-hover:scale-110 transition-transform" />
+                <span>Property Alert</span>
+                {savedAlertsCount > 0 ? (
+                  <span className="ml-0.5 px-1.5 py-0.2 bg-emerald-800 text-white text-[10px] rounded-full font-mono font-bold">
+                    {savedAlertsCount}
+                  </span>
+                ) : (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse ml-0.5" />
+                )}
+              </button>
+
               {/* View Switcher */}
               <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5">
                 <button
@@ -350,11 +463,32 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Quick Banner for Seeker Requests & Closing Fees */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Active Filter Criteria Alert Banner */}
+          <div className="mt-4 bg-linear-to-r from-emerald-50 via-slate-50 to-emerald-50/50 border border-emerald-200/90 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-2.5 w-2.5 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+              </span>
+              <span className="text-slate-700">
+                Never miss an off-market deal! Receive instant email or push notifications for{' '}
+                <strong className="text-slate-900 font-semibold">{activeFilterSummary}</strong> as soon as properties are listed.
+              </span>
+            </div>
+            <button
+              onClick={() => setIsPropertyAlertOpen(true)}
+              className="self-start sm:self-auto px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>Create Property Alert</span>
+            </button>
+          </div>
+
+          {/* 4 Interactive Portal Feature Cards */}
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div
               onClick={() => setIsRequestsModalOpen(true)}
-              className="bg-emerald-50 border border-emerald-200 hover:border-emerald-300 p-4 rounded-xl flex items-center justify-between cursor-pointer transition group"
+              className="bg-emerald-50 border border-emerald-200 hover:border-emerald-300 p-4 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-xs"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-emerald-800 text-white flex items-center justify-center shrink-0">
@@ -362,10 +496,10 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-emerald-900">
-                    Property Seeker Board
+                    Seeker Board
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    {requests.length} active buyer & tenant requests
+                    {requests.length} active buyer requests
                   </p>
                 </div>
               </div>
@@ -373,8 +507,48 @@ export default function HomePage() {
             </div>
 
             <div
+              onClick={() => setIsTitleSearchOpen(true)}
+              className="bg-slate-100 border border-slate-200 hover:border-slate-300 p-4 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-800 text-white flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-slate-900">
+                    Cadastral Title Search
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Verify Alausa & AGIS records
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-slate-800 underline">Verify</span>
+            </div>
+
+            <div
+              onClick={() => setIsPreQualifierOpen(true)}
+              className="bg-slate-100 border border-slate-200 hover:border-slate-300 p-4 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-slate-800 text-white flex items-center justify-center shrink-0">
+                  <BadgePercent className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-slate-900">
+                    Mortgage Pre-Qualifier
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    FMBN NHF & NMRC rates
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-slate-800 underline">Check</span>
+            </div>
+
+            <div
               onClick={() => setIsClosingCalcOpen(true)}
-              className="bg-slate-100 border border-slate-200 hover:border-slate-300 p-4 rounded-xl flex items-center justify-between cursor-pointer transition group"
+              className="bg-slate-100 border border-slate-200 hover:border-slate-300 p-4 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-xs"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-slate-800 text-white flex items-center justify-center shrink-0">
@@ -385,31 +559,11 @@ export default function HomePage() {
                     Closing Fees Calculator
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    Governor&apos;s Consent, legal & stamp duty
+                    Governor&apos;s Consent & tax
                   </p>
                 </div>
               </div>
               <span className="text-xs font-bold text-slate-800 underline">Calculate</span>
-            </div>
-
-            <div
-              onClick={() => setIsAgentDirectoryOpen(true)}
-              className="bg-slate-100 border border-slate-200 hover:border-slate-300 p-4 rounded-xl flex items-center justify-between cursor-pointer transition group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-slate-800 text-white flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-slate-900">
-                    Verified Agent Directory
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Direct WhatsApp & phone with vetted agents
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-slate-800 underline">Browse</span>
             </div>
           </div>
 
@@ -423,12 +577,19 @@ export default function HomePage() {
               <p className="text-sm text-slate-500 max-w-md mx-auto">
                 We couldn&apos;t find any listings matching your specific criteria. Try adjusting your state, budget, or title filter.
               </p>
-              <div className="flex items-center justify-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 <button
                   onClick={resetFilters}
                   className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer"
                 >
                   Reset All Filters
+                </button>
+                <button
+                  onClick={() => setIsPropertyAlertOpen(true)}
+                  className="px-4 py-2 text-xs font-semibold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Bell className="w-3.5 h-3.5 text-emerald-800" />
+                  <span>Alert Me When Listed</span>
                 </button>
                 <button
                   onClick={() => setIsPostModalOpen(true)}
@@ -463,7 +624,10 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* Section 3: Market Intelligence & Neighborhood Price Trends */}
+        {/* Section 3: Neighborhood Infrastructure & District Guide */}
+        <NeighborhoodExplorer onSelectArea={handleDistrictSelect} />
+
+        {/* Section 4: Market Intelligence & Neighborhood Price Trends */}
         <div id="market-trends-section">
           <MarketTrends
             currency={currency}
@@ -473,7 +637,7 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Section 4: Buyer Due Diligence & Nigerian Title Documentation Guide */}
+        {/* Section 5: Buyer Due Diligence & Nigerian Title Documentation Guide */}
         <NigerianTitleGuide />
 
         {/* Call to action for Agents & Property Owners */}
@@ -518,8 +682,58 @@ export default function HomePage() {
         onOpenRequests={() => setIsRequestsModalOpen(true)}
         onOpenClosingCalc={() => setIsClosingCalcOpen(true)}
         onOpenAgentDirectory={() => setIsAgentDirectoryOpen(true)}
+        onOpenTitleSearch={() => setIsTitleSearchOpen(true)}
+        onOpenPreQualifier={() => setIsPreQualifierOpen(true)}
         onScrollToTrends={scrollToTrends}
       />
+
+      {/* Floating Mobile Bottom Navigation Bar (Mobile only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 flex items-center justify-between text-[11px] font-medium text-slate-600">
+        <button
+          onClick={() => {
+            const el = document.getElementById('listings-catalog');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="flex flex-col items-center gap-0.5 cursor-pointer text-emerald-900 font-bold"
+        >
+          <Home className="w-4 h-4" />
+          <span>Properties</span>
+        </button>
+
+        <button
+          onClick={() => setIsRequestsModalOpen(true)}
+          className="flex flex-col items-center gap-0.5 cursor-pointer hover:text-emerald-900"
+        >
+          <PlusCircle className="w-4 h-4" />
+          <span>Requests</span>
+        </button>
+
+        <button
+          onClick={() => setIsTitleSearchOpen(true)}
+          className="flex flex-col items-center gap-0.5 cursor-pointer hover:text-emerald-900"
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>Verify Title</span>
+        </button>
+
+        <button
+          onClick={() => setIsAiModalOpen(true)}
+          className="flex flex-col items-center gap-0.5 cursor-pointer hover:text-emerald-900 text-emerald-800"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>AI Advisor</span>
+        </button>
+
+        <button
+          onClick={() => setIsPostModalOpen(true)}
+          className="flex flex-col items-center gap-0.5 cursor-pointer text-emerald-800 font-bold"
+        >
+          <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center text-xs">
+            +
+          </span>
+          <span>Post</span>
+        </button>
+      </div>
 
       {/* Modals & Drawers */}
       <PropertyDetailModal
@@ -528,6 +742,13 @@ export default function HomePage() {
         isFavorite={selectedProperty ? favoriteIds.includes(selectedProperty.id) : false}
         onToggleFavorite={handleToggleFavorite}
         onClose={() => setSelectedProperty(null)}
+        onOpenJVModal={() => setIsJVModalOpen(true)}
+      />
+
+      <JointVentureModal
+        isOpen={isJVModalOpen}
+        onClose={() => setIsJVModalOpen(false)}
+        currency={currency}
       />
 
       <PostPropertyModal
@@ -546,6 +767,17 @@ export default function HomePage() {
         onClose={() => setIsRequestsModalOpen(false)}
         requests={requests}
         onAddRequest={handleAddRequest}
+        currency={currency}
+      />
+
+      <TitleSearchServiceModal
+        isOpen={isTitleSearchOpen}
+        onClose={() => setIsTitleSearchOpen(false)}
+      />
+
+      <MortgagePreQualifierModal
+        isOpen={isPreQualifierOpen}
+        onClose={() => setIsPreQualifierOpen(false)}
         currency={currency}
       />
 
@@ -576,6 +808,33 @@ export default function HomePage() {
         currency={currency}
         onRemoveFavorite={handleToggleFavorite}
         onSelectProperty={(p) => setSelectedProperty(p)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
+
+      <InspectionsModal
+        isOpen={isInspectionsModalOpen}
+        onClose={() => setIsInspectionsModalOpen(false)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <PropertyAlertModal
+        isOpen={isPropertyAlertOpen}
+        onClose={() => setIsPropertyAlertOpen(false)}
+        category={category}
+        selectedState={selectedState}
+        selectedArea={selectedArea}
+        selectedType={selectedType}
+        selectedBedrooms={selectedBedrooms}
+        selectedTitle={selectedTitle}
+        maxPrice={maxPrice}
+        searchKeyword={searchKeyword}
+        currency={currency}
+        matchingCount={filteredProperties.length}
+        onAlertsChange={(count) => setSavedAlertsCount(count)}
       />
     </div>
   );

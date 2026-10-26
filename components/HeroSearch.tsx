@@ -348,6 +348,24 @@ export function HeroSearch({
             >
               With Governor&apos;s Consent
             </button>
+            <button
+              onClick={() => handleQuickPreset({ keyword: '24/7' })}
+              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-md transition cursor-pointer font-medium"
+            >
+              ⚡ 24/7 Power
+            </button>
+            <button
+              onClick={() => handleQuickPreset({ keyword: 'pool' })}
+              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-md transition cursor-pointer font-medium"
+            >
+              🏊 Swimming Pool
+            </button>
+            <button
+              onClick={() => handleQuickPreset({ keyword: 'BQ' })}
+              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-md transition cursor-pointer font-medium"
+            >
+              🏡 Boys Quarter (BQ)
+            </button>
           </div>
         </div>
 

@@ -1,8 +1,8 @@
-# Nigeria Property Centre (NPC) - Real Estate & Property Marketplace
+# Nigeria Property Centre (NPC) - Verified Real Estate & Property Marketplace
 
-A production-grade web application modelled after **nigeriapropertycenter.com**, Nigeria's leading real estate platform for buying, renting, and leasing residential, commercial, and land properties across Lagos, Abuja, Port Harcourt, and other Nigerian states.
+A production-grade web application modelled after **nigeriapropertycenter.com**, Nigeria's premier real estate platform for buying, renting, and leasing residential, commercial, short-let, and joint-venture properties across Lagos, Abuja, Port Harcourt, and all Nigerian states.
 
-Built with **Next.js 15 (App Router)**, **React 19**, **Tailwind CSS v4**, **Google GenAI SDK (Gemini 3.8 Flash)**, and **Plus Jakarta Sans** typography.
+Built with **Next.js 15 (App Router)**, **React 19**, **NeonDB & PostgreSQL**, **Prisma ORM**, **Tailwind CSS v4**, and **Plus Jakarta Sans** typography.
 
 ---
 
@@ -10,214 +10,338 @@ Built with **Next.js 15 (App Router)**, **React 19**, **Tailwind CSS v4**, **Goo
 
 1. [Project Overview](#2-project-overview)
 2. [Tech Stack & Architecture](#3-tech-stack--architecture)
-3. [Key Features & User Modules](#4-key-features--user-modules)
-4. [Nigerian Real Estate Domain Specifics](#5-nigerian-real-estate-domain-specifics)
-5. [Directory Structure](#6-directory-structure)
-6. [Server-Side AI API Route](#7-server-side-ai-api-route)
-7. [Running & Building Locally](#8-running--building-locally)
-8. [Design System & Constitution](#9-design-system--constitution)
+3. [Database & Authentication Architecture (NeonDB + PostgreSQL + Prisma)](#4-database--authentication-architecture-neondb--postgresql--prisma)
+4. [User Roles & Security (No Firebase)](#5-user-roles--security-no-firebase)
+5. [Connecting Your NeonDB PostgreSQL Database](#6-connecting-your-neondb-postgresql-database)
+6. [API Endpoints Reference](#7-api-endpoints-reference)
+7. [Key Features & Nigerian Real Estate Modules](#8-key-features--nigerian-real-estate-modules)
+8. [Nigerian Real Estate Domain Knowledge](#9-nigerian-real-estate-domain-knowledge)
+9. [Directory Structure](#10-directory-structure)
+10. [Running & Building Locally](#11-running--building-locally)
+11. [Design System & Frontend Constitution](#12-design-system--frontend-constitution)
 
 ---
 
 ## 2. Project Overview
 
-Finding and transacting real estate in Nigeria requires specialized knowledge of title documentation, land registries, local infrastructure dependencies (power, water treatment, security), and currency dynamics.
+Finding and transacting real estate in Nigeria requires specialized knowledge of title documentation, land registries (Alausa Lands Bureau, Abuja AGIS), local infrastructure dependencies (24/7 dedicated IPP vs dual estate generators, borehole industrial water treatment, gated island access), and currency dynamics (₦ NGN vs $ USD).
 
 **Nigeria Property Centre** solves these challenges by combining:
-- Verified property listings across prime Nigerian neighborhoods (Lekki Phase 1, Ikoyi, Banana Island, Victoria Island, Maitama, Asokoro, Wuse 2, Port Harcourt Old GRA).
-- Direct WhatsApp & phone access to verified real estate agents.
-- Nigerian title verification badges (Certificate of Occupancy, Governor's Consent, Government Gazette).
-- AI-powered market valuation and legal advisory powered by **Google Gemini 3.8 Flash**.
-- A Seeker Request Board allowing prospective buyers and tenants to post custom requirements and match with agents.
-- Comprehensive financial tools: Mortgage Calculator, and Acquisition Closing Cost & Statutory Fee Calculator.
+- **Verified Property Listings**: Curated across prime Nigerian enclaves (Lekki Phase 1, Ikoyi, Banana Island, Victoria Island, Maitama, Asokoro, Wuse 2, Port Harcourt Old GRA).
+- **Relational PostgreSQL Database via NeonDB**: Cloud-native serverless PostgreSQL persistence with Prisma ORM schemas.
+- **Full Authentication System (No Firebase)**: Password hashing with `bcryptjs`, JSON Web Tokens (JWT), HTTP-only cookies, and role-based permissions (Verified Agent, Property Seeker, Developer/Landowner).
+- **Direct Agent Contact**: One-click WhatsApp links and phone dials with pre-filled listing summaries.
+- **Physical & Virtual WhatsApp Inspection Scheduler**: Integrated booking management synced to the database.
+- **Nigerian Title Verification Badges**: Certificate of Occupancy (C of O), Governor's Consent, Government Gazette, and Deed of Assignment.
+- **Joint Venture & Off-Plan Development Hub**: Equity sharing formulas (Landowner equity vs Developer construction financing) and 5-stage milestone payment schedules.
+- **Financial & Due Diligence Suites**: Mortgage Pre-Qualifier (FMBN/NHF, NMRC commercial loans), Closing Costs & Statutory Fees Calculator, and Cadastral Title Charting.
 
 ---
 
 ## 3. Tech Stack & Architecture
 
-- **Framework**: Next.js 15.4 (App Router, standalone output, React Server & Client Components)
-- **UI Library**: React 19, Lucide React icons
-- **Styling**: Tailwind CSS v4, PostCSS, modern flexbox & grid layouts
-- **AI Integration**: `@google/genai` TypeScript SDK (model: `gemini-3.8-flash`) executed strictly in server-side API routes (`app/api/valuation/route.ts`)
+- **Frontend Framework**: Next.js 15.4+ with App Router (React 19, Server & Client Components)
+- **Database Engine**: **NeonDB** (Serverless PostgreSQL) via `@neondatabase/serverless`
+- **ORM & Schema**: **Prisma ORM** (`prisma/schema.prisma` with `User`, `Property`, `SavedProperty`, `InspectionRequest`, and `PropertyRequest` models)
+- **Authentication**: Custom self-contained auth engine (**No Firebase**) using `bcryptjs` for salted hashing, `jsonwebtoken` (JWT) for secure session tokens, and client-side `AuthProvider` context
+- **Styling**: Tailwind CSS v4, PostCSS, responsive flexbox/grid layouts
+- **Icons**: Lucide React
 - **Typography**: Google Fonts `Plus Jakarta Sans` with monospace tabular numerals for currency figures
-- **Media Assets**: High-resolution architectural photography generated specifically for Nigerian residential enclaves (Lekki contemporary duplexes, Ikoyi waterfront penthouses, Maitama villas, Banana Island terraces, Lagos lagoon skyline)
+- **Media Assets**: High-resolution architectural photography of Nigerian luxury homes and prime developments
 
 ---
 
-## 4. Key Features & User Modules
+## 4. Database & Authentication Architecture (NeonDB + PostgreSQL + Prisma)
 
-### 4.1 Top Navigation Bar (Strict 3-Zone Contract)
-- **Zone 1 (Brand Wordmark)**: Distinctive single-line wordmark "Nigeria Property Centre" with the brand insignia.
-- **Zone 2 (Navigation)**: Single-line links for *For Sale*, *For Rent*, *Property Requests*, *Market Trends*, and *AI Advisor*.
-- **Zone 3 (Utilities & Primary Action)**: 
-  - **Currency Switcher**: Toggle between Nigerian Naira (**₦ NGN**) and US Dollar (**$ USD** at realistic market rate ~₦1,450/$).
-  - **Closing Fees Calculator Quick Launch**.
-  - **Verified Agents Directory Quick Launch**.
-  - **Comparison Counter & Modal**.
-  - **Saved Favorites Drawer**.
-  - **Primary CTA**: "Post a Property" button.
+### 4.1 Prisma Schema (`prisma/schema.prisma`)
+The application defines a normalized relational schema tailored to Nigerian real estate operations:
 
-### 4.2 Hero Section & Nigerian Property Filter Console
-- **Category Tabs**: For Sale, For Rent, Short Let, and Joint Venture.
-- **State & Area Dropdowns**: Dynamically updates areas based on chosen state (Lagos, Abuja FCT, Rivers, Oyo, Ogun, Delta).
-- **Property Types**: Detached Duplex, Semi-Detached, Terraced Duplex, Flat / Apartment, Luxury Penthouse, Land Plots, and Office Space.
-- **Bedrooms**: Any, 1, 2, 3, 4, 5+ Beds.
-- **Keyword Search**: Matches titles, amenities (pool, BQ, cinema, inverter), and addresses.
-- **Title Document Filter**: Filter by C of O, Governor's Consent, Gazette, Federal C of O, or Registered Deed.
-- **Max Price Slider**: Up to ₦1 Billion+ with instant price formatting in words.
-- **One-Click Popular Presets**: Quick search for *Lekki Phase 1*, *Ikoyi Waterfront*, *Maitama Abuja*, *Banana Island*, *Short Let Apartments*, and *Governor's Consent*.
-- **Quantitative Proof Strip**: Verified stats (45k+ Listings, 100% Title Verified, 2.4k+ Vetted Agents, ₦0 Free Buyer Enquiries).
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-### 4.3 Property Catalog & Zero-Pill Property Cards
-- Displays listings with lead photography (4:3 aspect ratio), category overlays, and verified badges.
-- **Zero-Pill Metadata**: Clean unboxed inline specs with subtle typographic separators (`5 Beds · 6 Baths · 4 Cars · 600 sqm · C of O`).
-- **Tabular Numerals**: High-legibility Naira price display with rental period indicators (`/yr`, `/day`).
-- **Action Affordances**:
-  - Direct **WhatsApp Agent** button with prefilled listing title, location, and price.
-  - **Schedule Inspection** button.
-  - **Compare Property** toggle (compare up to 3 properties).
-  - **Bookmark / Favorite** toggle.
-- **Sorting & View Toggle**: Sort by Featured, Price (Low to High / High to Low), Bedrooms, or Newest. Switch between Grid and Compact List views.
+generator client {
+  provider = "prisma-client-js"
+}
 
-### 4.4 Contiguous Property Detail View & Booking Module
-- High-res photo gallery with thumbnail switcher.
-- Full specifications: Title document, Land size, Year built, Electricity status, Water treatment plant, Security post, and Boys Quarters (BQ).
-- Verified Agent contact card with phone, direct WhatsApp link, and rating.
-- **Interactive Inspection Scheduler**:
-  - Choose between **Physical On-Site Inspection** or **Virtual Video Tour**.
-  - Select date and time slot (Morning / Afternoon).
-  - Instant booking confirmation receipt.
-- **Nigerian Mortgage Calculator**:
-  - Adjust down payment (10% to 50%), loan tenure (5 to 25 years), and interest rate (12% to 28% p.a.).
-  - Calculates estimated monthly repayment in ₦ Naira.
-- **Embedded AI Due Diligence**:
-  - One-click trigger to generate an instant comparative valuation and title safety assessment for the active property.
+enum Role {
+  SEEKER
+  AGENT
+  DEVELOPER
+  ADMIN
+}
 
-### 4.5 Seeker Request Board ("Post a Request")
-- Enables home seekers, corporate tenants, and diaspora buyers to broadcast custom requirements to verified agents.
-- Filter requests by purpose: Buy, Rent, Short Let, Land.
-- "Post a Request" form capturing budget, preferred area, bedrooms, specific amenities, and direct contact.
-- Agents can click "Match on WhatsApp" to initiate direct conversation with the seeker.
+enum PropertyType {
+  FLAT_APARTMENT
+  DETACHED_DUPLEX
+  SEMI_DETACHED_DUPLEX
+  TERRACE
+  COMMERCIAL
+  LAND
+  SHORT_LET
+  OFF_PLAN
+}
 
-### 4.6 Nigerian Market Intelligence & Neighborhood Price Trends
-- Displays verified benchmark data across major enclaves:
-  - Average Duplex Sale Price in Naira
-  - Average Annual Rent in Naira
-  - Gross Rental Yield (%)
-  - Year-over-Year Capital Appreciation (YoY %)
-  - Land Price per SQM in Naira
-  - Demand Index & neighborhood investment commentary
-- State filter: Lagos, Abuja (FCT), Rivers.
-- Integrated AI Valuation button on any neighborhood.
+enum PropertyListingType {
+  SALE
+  RENT
+  SHORT_LET
+  JOINT_VENTURE
+}
 
-### 4.7 Property Closing Costs & Legal Fees Calculator
+model User {
+  id               String              @id @default(uuid())
+  email            String              @unique
+  passwordHash     String
+  fullName         String
+  phone            String              // +234 Nigerian format
+  role             Role                @default(SEEKER)
+  agencyName       String?
+  licenseNumber    String?             // e.g. LASRERA or ERCAAN registration
+  isVerified       Boolean             @default(false)
+  avatarUrl        String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  properties       Property[]          @relation("AgentProperties")
+  savedProperties  SavedProperty[]
+  inspections      InspectionRequest[]
+  propertyRequests PropertyRequest[]
+}
+
+model Property {
+  id             String              @id @default(uuid())
+  title          String
+  description    String
+  listingType    PropertyListingType
+  propertyType   PropertyType
+  price          Float
+  currency       String              @default("NGN")
+  state          String
+  city           String
+  neighborhood   String
+  bedrooms       Int                 @default(0)
+  bathrooms      Int                 @default(0)
+  titleDoc       String              // "Governor's Consent", "C of O", "Gazette"
+  isVerified     Boolean             @default(false)
+  images         String[]
+  features       String[]
+
+  agentId        String
+  agent          User                @relation("AgentProperties", fields: [agentId], references: [id], onDelete: Cascade)
+  savedBy        SavedProperty[]
+  inspections    InspectionRequest[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model InspectionRequest {
+  id            String   @id @default(uuid())
+  userId        String
+  propertyId    String
+  preferredDate DateTime
+  preferredTime String
+  type          String   @default("PHYSICAL") // PHYSICAL or VIRTUAL_WHATSAPP
+  notes         String?
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+```
+
+### 4.2 NeonDB Serverless PostgreSQL Driver (`lib/db.ts`)
+The backend database manager connects to Neon's high-speed connection pool:
+- Executes queries via `@neondatabase/serverless`.
+- Automatically executes table creation `DDL` (`users`, `inspections`, `saved_properties`) on first query if they do not already exist.
+- **Zero-Config Resilient Fallback**: In local preview or sandbox environments where `DATABASE_URL` has not yet been set with live credentials, it falls back to an in-memory repository pre-seeded with realistic Nigerian agent and buyer accounts so the application never crashes.
+
+---
+
+## 5. User Roles & Security (No Firebase)
+
+The authentication system operates without Firebase, giving full control over data sovereignty and compliance with Nigerian data regulations (NDPR):
+
+1. **Realtor / Estate Agent (`AGENT`)**:
+   - Register with Agency Name and LASRERA (Lagos State Real Estate Regulatory Authority) / ERCAAN registration license.
+   - Verified badge upon providing license.
+   - Automatically pre-populates agent information when creating new property listings.
+   - Receives physical inspection and WhatsApp video tour leads.
+
+2. **Property Seeker / Buyer (`SEEKER`)**:
+   - Save favorite properties across sessions.
+   - Schedule on-site physical inspections or live WhatsApp virtual walk-throughs.
+   - Track booking status (Pending, Confirmed, Completed) in the **Inspection Schedules** modal.
+   - Post custom requests to the Seeker Board.
+
+3. **Property Developer / Landowner (`DEVELOPER`)**:
+   - Post joint venture land mandates and off-plan milestone projects.
+   - Model JV equity ratios (land equity vs construction financing).
+
+### Pre-Seeded Quick Demo Accounts
+For instant testing without filling out forms, the Auth Modal provides 1-click login buttons:
+- **Verified Agent**: `agent@nigeriaproperty.com` / `password123` (Adebayo Alabi, LASRERA/REA/2024/0892)
+- **Property Seeker**: `seeker@nigeriaproperty.com` / `password123` (Chioma Okonjo)
+- **Developer**: `developer@nigeriaproperty.com` / `password123` (Engr. Emeka Danladi)
+
+---
+
+## 6. Connecting Your NeonDB PostgreSQL Database
+
+1. Sign up or log into [Neon Console](https://console.neon.tech).
+2. Create a new PostgreSQL project (e.g., `nigeria-property-centre`).
+3. Under **Dashboard > Connection Details**, copy the PostgreSQL connection string with `sslmode=require`:
+   ```
+   postgresql://[user]:[password]@[endpoint].neon.tech/neondb?sslmode=require
+   ```
+4. Set the connection string in your `.env.local` or deployment environment:
+   ```env
+   DATABASE_URL="postgresql://[user]:[password]@[endpoint].neon.tech/neondb?sslmode=require"
+   JWT_SECRET="your_custom_secure_jwt_secret_key"
+   ```
+5. Restart your application. The database tables will be initialized automatically, and all registrations, logins, inspections, and saved properties will persist directly to your Neon PostgreSQL database!
+
+---
+
+## 7. API Endpoints Reference
+
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Create a new user (with password hashing and role validation) | No |
+| `POST` | `/api/auth/login` | Verify credentials and return JWT token + session cookie | No |
+| `GET` | `/api/auth/me` | Fetch currently logged-in user profile from JWT session | Yes |
+| `POST` | `/api/auth/logout` | Clear session cookie and invalidate client state | No |
+| `GET` | `/api/inspections` | Fetch all scheduled inspections for logged-in user | Yes |
+| `POST` | `/api/inspections` | Schedule a new physical site tour or WhatsApp video inspection | Yes |
+| `GET` | `/api/user/saved-properties` | Retrieve array of saved property IDs for user | Yes |
+| `POST` | `/api/user/saved-properties` | Toggle save/unsave property bookmark | Yes |
+| `POST` | `/api/valuation` | Server-side AI property valuation and legal advisory | No |
+
+---
+
+## 8. Key Features & Nigerian Real Estate Modules
+
+### 8.1 3-Zone Clean Header & User Management
+- **Zone 1 (Wordmark)**: "Nigeria Property Centre" wordmark with NPC emblem.
+- **Zone 2 (Navigation)**: For Sale, For Rent, Requests, Trends, Title Search, JV & Off-Plan, and AI Advisor.
+- **Zone 3 (Controls & Auth)**:
+  - Currency switcher (₦ NGN vs $ USD).
+  - Mortgage pre-qualifier shortcut.
+  - Closing fees calculator shortcut.
+  - Saved properties drawer with count badge.
+  - **Inspection Schedules modal with booking count badge**.
+  - **User Account Menu**: Displays user initials, verification badge, role indicator, and quick links to manage listings or sign out.
+  - "Post Property" CTA.
+
+### 8.2 Hero Search & Nigerian Filtering
+- Category tabs: For Sale, For Rent, Short Let, Joint Venture.
+- Dynamic Nigerian State & Area selector (Lagos, Abuja FCT, Rivers, Oyo, Ogun, Delta).
+- Title Document filtering (C of O, Governor's Consent, Gazette, Registered Deed).
+- Real-time price slider up to ₦1 Billion+ with verbal Naira formatting (e.g. *Two Hundred and Fifty Million Naira*).
+
+### 8.3 Contiguous Property Detail View & Booking Engine
+- Multi-image photo gallery with thumbnail picker.
+- Full specifications: Title document, Land size (sqm), Electricity reliability (dedicated IPP vs dual estate generator), Water treatment plant, Security post, and Boys Quarters (BQ).
+- **Tab 1: Book Inspection**: Choose Physical On-Site or Live WhatsApp Video Tour with preferred date/time slot. Syncs directly to the user's account and database.
+- **Tab 2: Specialized Dynamic Tab**:
+  - *Short Let Properties*: Nightly rate calculator, caution deposit (₦50,000), housekeeping fee, and WhatsApp host reservation.
+  - *Joint Venture Properties*: Land equity valuation, construction financing feasibility, and JV mandate submission.
+  - *Sale/Rent Properties*: Nigerian mortgage amortization calculator with typical 18-21% interest rate and loan term slider.
+- **Tab 3: AI Real Estate Due Diligence**: Automated valuation and title safety assessment.
+
+### 8.4 Joint Venture (JV) & Off-Plan Development Hub
+- **JV Equity Sharing Calculator**: Models clean land contribution vs developer construction costs to determine equitable sharing ratios and goodwill premium.
+- **5-Stage Off-Plan Milestone Payment Planner**:
+  1. *Foundation & Piling* (20%)
+  2. *Ground Floor to Raft Slab* (20%)
+  3. *Carcass & Roofing Structure* (25%)
+  4. *MEP, Plastering & Glazing* (20%)
+  5. *Handover & Snagging* (15%)
+- **Active JV Mandates**: Real proposals in Bourdillon Ikoyi, Katampe Abuja, Admiralty Lekki, and Old GRA Port Harcourt.
+- **Legal Safeguards**: Irrevocable Power of Attorney (POA), Joint Development Agreement (JDA), and Bank Performance Bonds.
+
+### 8.5 Closing Costs & Statutory Fees Calculator
 - Calculates the true "cash-to-close" amount for Nigerian property acquisitions:
-  - **Governor's Consent & Registration Fee**: ~3% in Lagos (1.5% consent + 0.5% capital gains + 1% registration) / 2.5% in Abuja AGIS.
+  - **Governor's Consent & Registration Fee**: ~3% in Lagos / 2.5% in Abuja AGIS.
   - **Federal / State Stamp Duty**: ~1.5%.
-  - **Legal / Conveyancing Fee**: 5% (Nigerian Bar Association standard property conveyancing rate).
+  - **Legal / Conveyancing Fee**: 5% (NBA property conveyancing standard).
   - **Agency Brokerage Commission**: 5% standard.
   - **Survey Plan & Charting Fee**: ₦450,000 flat.
-- Itemized breakdown table and one-click "Copy Closing Summary" button for easy forwarding to lawyers or mortgage banks.
-
-### 4.8 Verified Agents Directory
-- Directory of licensed estate practitioners and agencies.
-- Filter by state (Lagos, Abuja, Rivers) or search by area.
-- Displays agency names, years of experience, specialization (e.g. Luxury Duplexes, AGIS Lands), active listings count, and direct WhatsApp / Call triggers.
-
-### 4.9 "Post a Property" Listing Portal
-- Working form for landlords, agents, and developers to list a property.
-- Captures title, category, property type, price, state, area, street address, bedrooms, bathrooms, parking, title document, amenities checkboxes, agent credentials, and photo selection.
-- Instantly adds the new listing to the live catalog in React state.
-
-### 4.10 AI Real Estate Advisor & Title Checker (Gemini 3.8 Flash)
-- Interactive conversational modal powered by `@google/genai`.
-- Pre-built quick queries:
-  - Lekki Phase 1 rental benchmarks.
-  - Legal distinction between Governor's Consent, C of O, and Gazette under the Land Use Act 1978.
-  - Step-by-step title search procedures at Alausa Lands Bureau (Lagos) or AGIS (Abuja).
-  - High-yield neighborhoods in Abuja.
-- Custom user prompt handling with formatted markdown responses and one-click copy.
-
-### 4.11 Nigerian Land Titles & Legal Due Diligence Guide
-- In-depth guide explaining:
-  - **Certificate of Occupancy (C of O)**
-  - **Governor's Consent**
-  - **Government Gazette & Excision**
-  - **Deed of Assignment & Registered Survey**
-- **5-Step Land Verification Protocol**: Physical site visit, survey coordinate charting, lands registry search, legal deed execution, and Governor's Consent filing.
 
 ---
 
-## 5. Nigerian Real Estate Domain Specifics
+## 9. Nigerian Real Estate Domain Knowledge
 
 | Concept | Explanation in Nigerian Context |
 | :--- | :--- |
 | **Land Use Act of 1978** | Federal law vesting all state lands in the State Governor, who holds it in trust. Individuals own 99-year leaseholds, not absolute freehold. |
 | **Governor's Consent** | Required for any subsequent assignment, mortgage, or transfer of land that already has a C of O. Without it, legal ownership is not perfected. |
-| **Gazette / Excision** | Official government gazette publication legally carving out ancestral community land from government acquisition. Safe root of title. |
+| **Gazette / Excision** | Official government publication legally carving out ancestral community land from government acquisition. Safe root of title. |
 | **Boys Quarters (BQ)** | Detached or semi-detached self-contained domestic staff room common in Nigerian luxury houses and duplexes. |
 | **24/7 Power / Dual Gen** | Uninterrupted electricity provided by dedicated community generators, solar inverters, or independent power plants (IPP), critical in Nigerian listings. |
 | **Industrial Water Treatment** | On-site reverse osmosis or multi-stage filtration system installed on boreholes to guarantee drinkable clean water. |
-| **Omo-onile Prevention** | Traditional land-owning families whose claims can cause conflict unless property title has registered C of O or Governor's Consent. |
+| **LASRERA** | Lagos State Real Estate Regulatory Authority. Official regulatory agency licensing vetted realtors and brokers. |
 
 ---
 
-## 6. Directory Structure
+## 10. Directory Structure
 
 ```
 ├── app/
 │   ├── api/
-│   │   └── valuation/
-│   │       └── route.ts          # Server-side Gemini 3.8 Flash route
-│   ├── globals.css               # Tailwind CSS v4 imports
-│   ├── layout.tsx                # Plus Jakarta Sans & SEO metadata
-│   └── page.tsx                  # Master page integrating all modules
+│   │   ├── auth/
+│   │   │   ├── login/route.ts        # User login & JWT issuance
+│   │   │   ├── logout/route.ts       # Session clearing
+│   │   │   ├── me/route.ts           # Token verification & profile fetch
+│   │   │   └── register/route.ts     # User registration with bcrypt hashing
+│   │   ├── inspections/route.ts      # Scheduled property inspections API
+│   │   ├── user/saved-properties/    # Saved favorites persistence API
+│   │   └── valuation/route.ts        # AI property valuation & advisory
+│   ├── globals.css                   # Tailwind CSS v4 imports
+│   ├── layout.tsx                    # RootLayout wrapped with AuthProvider
+│   └── page.tsx                      # Master marketplace page
 ├── components/
-│   ├── AgentDirectoryModal.tsx   # Verified agents directory
-│   ├── AiAdvisorModal.tsx        # Gemini AI Real Estate Advisor
+│   ├── AgentDirectoryModal.tsx       # Verified agents directory
+│   ├── AiAdvisorModal.tsx            # AI Real Estate Advisor
+│   ├── AuthModal.tsx                 # Sign In / Register with role selector
 │   ├── ClosingCostCalculatorModal.tsx # Statutory & legal fees breakdown
-│   ├── CompareModal.tsx          # Side-by-side comparison table
-│   ├── FavoritesDrawer.tsx       # Saved properties slide-over drawer
-│   ├── Footer.tsx                # Footer with quick links & legal notes
-│   ├── HeroSearch.tsx            # Search console, category tabs & filters
-│   ├── MarketTrends.tsx          # Neighborhood price & rental yield index
-│   ├── Navbar.tsx                # 3-Zone Top Bar with currency switcher
-│   ├── NigerianTitleGuide.tsx    # Land Use Act legal due diligence guide
-│   ├── PostPropertyModal.tsx     # Agent/owner listing submission portal
-│   ├── PropertyCard.tsx          # Zero-pill property card with WhatsApp CTA
-│   ├── PropertyDetailModal.tsx   # Gallery, specs, inspection & mortgage
-│   └── PropertyRequestsModal.tsx # Seeker requests & agent matching board
+│   ├── CompareModal.tsx              # Side-by-side comparison table
+│   ├── FavoritesDrawer.tsx           # Saved properties slide-over drawer
+│   ├── Footer.tsx                    # Footer with legal notes
+│   ├── HeroSearch.tsx                # Search console, category tabs & filters
+│   ├── InspectionsModal.tsx          # Physical & WhatsApp inspection tracker
+│   ├── JointVentureModal.tsx         # Nigerian JV equity sharing & milestones
+│   ├── MarketTrends.tsx              # Neighborhood price & rental yield index
+│   ├── MortgagePreQualifierModal.tsx # Commercial & NHF mortgage checker
+│   ├── Navbar.tsx                    # 3-Zone Top Bar with auth status & menu
+│   ├── NeighborhoodExplorer.tsx      # District infrastructure & amenities guide
+│   ├── NigerianTitleGuide.tsx        # Land Use Act legal due diligence guide
+│   ├── PostPropertyModal.tsx         # Agent listing submission portal
+│   ├── PropertyCard.tsx              # Zero-pill property card with WhatsApp CTA
+│   ├── PropertyDetailModal.tsx       # Gallery, specs, inspection & mortgage
+│   ├── PropertyRequestsModal.tsx     # Seeker requests & agent matching board
+│   └── TitleSearchServiceModal.tsx   # Cadastral charting & registry verification
+├── contexts/
+│   └── AuthContext.tsx               # Client authentication & inspection state
 ├── lib/
-│   ├── property-data.ts          # Nigerian properties, requests, trends & agents
-│   └── utils.ts                  # Classnames & styling helper
+│   ├── auth.ts                       # JWT signing/verification & bcrypt helpers
+│   ├── db.ts                         # NeonDB PostgreSQL client & auto-migrations
+│   ├── property-data.ts              # Nigerian properties, requests, trends & agents
+│   └── utils.ts                      # Classnames & styling helper
+├── prisma/
+│   └── schema.prisma                 # Relational PostgreSQL models for Prisma
 ├── public/
-│   └── images/                   # Generated Nigerian luxury architectural photography
-│       ├── abuja_maitama_villa_*.jpg
-│       ├── banana_island_terrace_*.jpg
-│       ├── hero_lekki_mansion_*.jpg
-│       ├── ikoyi_waterfront_penthouse_*.jpg
-│       └── lagos_skyline_aerial_*.jpg
-├── metadata.json                 # AI Studio metadata & major capabilities
-└── package.json                  # Dependencies & scripts
+│   └── images/                       # Architectural photography
+├── .env.example                      # Environment variables documentation
+└── package.json                      # Dependencies & scripts
 ```
 
 ---
 
-## 7. Server-Side AI API Route
-
-The endpoint at `/app/api/valuation/route.ts` runs on the server using `@google/genai`:
-
-- **Model**: `gemini-3.8-flash`
-- **Environment Variable**: `process.env.GEMINI_API_KEY` (kept strictly server-side)
-- **Telemetry**: Configured with `httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }`
-- **Capabilities**:
-  - Estimates fair market sales values and annual rents in ₦ Naira.
-  - Calculates expected gross rental yields for Nigerian neighborhoods.
-  - Explains legal safety, red flags, and search steps at Alausa (Lagos) or AGIS (Abuja).
-
----
-
-## 8. Running & Building Locally
+## 11. Running & Building Locally
 
 ### Prerequisites
 - Node.js 20+
@@ -229,9 +353,16 @@ npm install
 ```
 
 ### Environment Variables
-Create a `.env.local` file:
+Create a `.env.local` file based on `.env.example`:
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+# NeonDB Serverless PostgreSQL Connection String
+DATABASE_URL="postgresql://user:password@ep-xyz.region.aws.neon.tech/neondb?sslmode=require"
+
+# JWT Secret for Session Authentication
+JWT_SECRET="your_custom_secure_jwt_secret_key"
+
+# Gemini API Key (Server-side)
+GEMINI_API_KEY="your_gemini_api_key"
 ```
 
 ### Development Server
@@ -253,12 +384,10 @@ npm run lint
 
 ---
 
-## 9. Design System & Constitution
+## 12. Design System & Frontend Constitution
 
-This application strictly complies with the **Universal Frontend Design Constitution**:
-1. **Top Bar Contract**: Exactly 3 zones (Brand wordmark, 4-5 single-line links, 1 primary action button).
+1. **Top Bar Contract**: Exactly 3 zones (Brand wordmark, single-line links, primary action button and user account controls).
 2. **Zero-Pill Discipline**: Metadata is formatted as clean unboxed inline text separated by `·` rather than colored pill capsules.
-3. **No Slop**: Zero mechanical code comment prefixes (`//`), no fake version numbers, no decorative status pulse dots on static titles.
-4. **60-30-10 Palette**: 60% clean canvas (`bg-slate-50`), 30% structural surfaces (`border-slate-200`, `bg-white`), 10% Nigerian emerald green accent (`#008751` / `bg-emerald-800`).
-5. **Tabular Numerals**: All currency figures and metrics use `font-mono tabular-nums` for vertical alignment.
-6. **Zero-Broken-Image Policy**: All image elements feature styled CSS fallbacks and `referrerPolicy="no-referrer"`.
+3. **No Clutter & Anti-AI Slop**: Clean editorial typography and responsive functional controls.
+4. **60-30-10 Palette**: 60% clean canvas (`bg-slate-50`), 30% structural surfaces (`border-slate-200`, `bg-white`), 10% Nigerian emerald green accent (`bg-emerald-800`).
+5. **Tabular Numerals**: All currency figures and metrics use `tabular-nums` for clean visual alignment.

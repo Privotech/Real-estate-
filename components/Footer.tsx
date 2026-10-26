@@ -9,6 +9,8 @@ interface FooterProps {
   onOpenRequests?: () => void;
   onOpenClosingCalc?: () => void;
   onOpenAgentDirectory?: () => void;
+  onOpenTitleSearch?: () => void;
+  onOpenPreQualifier?: () => void;
   onScrollToTrends?: () => void;
 }
 
@@ -19,6 +21,8 @@ export function Footer({
   onOpenRequests,
   onOpenClosingCalc,
   onOpenAgentDirectory,
+  onOpenTitleSearch,
+  onOpenPreQualifier,
   onScrollToTrends,
 }: FooterProps) {
   return (
@@ -121,7 +125,23 @@ export function Footer({
                   onClick={onOpenAiAdvisor}
                   className="hover:text-emerald-400 transition cursor-pointer text-left"
                 >
-                  AI Valuation & Title Checker
+                  AI Valuation Advisor
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={onOpenTitleSearch}
+                  className="hover:text-emerald-400 transition cursor-pointer text-left"
+                >
+                  Land Registry Title Search
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={onOpenPreQualifier}
+                  className="hover:text-emerald-400 transition cursor-pointer text-left"
+                >
+                  Mortgage & NHF Pre-Qualifier
                 </button>
               </li>
               <li>
@@ -138,14 +158,6 @@ export function Footer({
                   className="hover:text-emerald-400 transition cursor-pointer text-left"
                 >
                   Verified Estate Agents Directory
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={onScrollToTrends}
-                  className="hover:text-emerald-400 transition cursor-pointer text-left"
-                >
-                  Neighborhood Price Trends
                 </button>
               </li>
               <li>

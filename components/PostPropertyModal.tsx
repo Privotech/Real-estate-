@@ -9,6 +9,7 @@ import {
   PROPERTY_TYPES,
   TITLE_DOCUMENTS,
 } from '@/lib/property-data';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PostPropertyModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function PostPropertyModal({
   onClose,
   onAddProperty,
 }: PostPropertyModalProps) {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<'for-sale' | 'for-rent' | 'short-let' | 'joint-venture'>('for-sale');
   const [propertyType, setPropertyType] = useState<Property['propertyType']>('Detached Duplex');
@@ -35,10 +37,12 @@ export function PostPropertyModal({
   const [landSizeSqm, setLandSizeSqm] = useState(500);
   const [titleDocument, setTitleDocument] = useState<Property['titleDocument']>('Certificate of Occupancy (C of O)');
   const [description, setDescription] = useState('');
-  const [agentName, setAgentName] = useState('Kolawole Sanusi');
-  const [agency, setAgency] = useState('Sanusi Real Estate Ltd');
-  const [phone, setPhone] = useState('+234 802 111 2233');
-  const [whatsapp, setWhatsapp] = useState('2348021112233');
+  const [agentName, setAgentName] = useState(user?.fullName || 'Kolawole Sanusi');
+  const [agency, setAgency] = useState(user?.agencyName || 'Sanusi Real Estate Ltd');
+  const [phone, setPhone] = useState(user?.phone || '+234 802 111 2233');
+  const [whatsapp, setWhatsapp] = useState(
+    user?.phone ? user.phone.replace(/[^0-9]/g, '') : '2348021112233'
+  );
   const [selectedImage, setSelectedImage] = useState('/images/hero_lekki_mansion_1792681047972.jpg');
   const [isSuccess, setIsSuccess] = useState(false);
 
