@@ -3,7 +3,13 @@ import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
 import { DbUser } from './db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nigeria_property_centre_super_secure_jwt_key_2026';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET must be set in the project-root .env file.');
+  }
+  return secret;
+}
 
 export interface TokenPayload {
   userId: string;
@@ -28,14 +34,15 @@ export function generateToken(user: DbUser): string {
     fullName: user.full_name,
   };
 
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: '7d',
   });
 }
 
 export function verifyToken(token: string): TokenPayload | null {
+  const secret = getJwtSecret();
   try {
-    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+    return jwt.verify(token, secret) as TokenPayload;
   } catch {
     return null;
   }

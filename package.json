@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:generate": "prisma generate",
+    "predev": "npm run db:generate",
     "dev": "next dev",
+    "prebuild": "npm run db:generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

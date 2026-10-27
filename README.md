@@ -197,12 +197,13 @@ For instant testing without filling out forms, the Auth Modal provides 1-click l
    ```
    postgresql://[user]:[password]@[endpoint].neon.tech/neondb?sslmode=require
    ```
-4. Set the connection string in your `.env.local` or deployment environment:
+4. Put the connection string in the project-root `.env` file (the project uses `.env` only):
    ```env
-   DATABASE_URL="postgresql://[user]:[password]@[endpoint].neon.tech/neondb?sslmode=require"
-   JWT_SECRET="your_custom_secure_jwt_secret_key"
+   DATABASE_URL="postgresql://USER:PASSWORD@YOUR_NEON_HOST/neondb?sslmode=require"
+   JWT_SECRET="replace_with_a_unique_random_secret"
    ```
-5. Restart your application. The database tables will be initialized automatically, and all registrations, logins, inspections, and saved properties will persist directly to your Neon PostgreSQL database!
+5. Add your Gemini API key as `GEMINI_API_KEY` in `.env` to enable AI valuation and legal advisory.
+6. Restart your application. If the database schema has not been applied, run the project’s Prisma setup or migration commands.
 
 ---
 
@@ -290,53 +291,18 @@ For instant testing without filling out forms, the Auth Modal provides 1-click l
 ## 10. Directory Structure
 
 ```
-├── app/
-│   ├── api/
-│   │   ├── auth/
-│   │   │   ├── login/route.ts        # User login & JWT issuance
-│   │   │   ├── logout/route.ts       # Session clearing
-│   │   │   ├── me/route.ts           # Token verification & profile fetch
-│   │   │   └── register/route.ts     # User registration with bcrypt hashing
-│   │   ├── inspections/route.ts      # Scheduled property inspections API
-│   │   ├── user/saved-properties/    # Saved favorites persistence API
-│   │   └── valuation/route.ts        # AI property valuation & advisory
-│   ├── globals.css                   # Tailwind CSS v4 imports
-│   ├── layout.tsx                    # RootLayout wrapped with AuthProvider
-│   └── page.tsx                      # Master marketplace page
-├── components/
-│   ├── AgentDirectoryModal.tsx       # Verified agents directory
-│   ├── AiAdvisorModal.tsx            # AI Real Estate Advisor
-│   ├── AuthModal.tsx                 # Sign In / Register with role selector
-│   ├── ClosingCostCalculatorModal.tsx # Statutory & legal fees breakdown
-│   ├── CompareModal.tsx              # Side-by-side comparison table
-│   ├── FavoritesDrawer.tsx           # Saved properties slide-over drawer
-│   ├── Footer.tsx                    # Footer with legal notes
-│   ├── HeroSearch.tsx                # Search console, category tabs & filters
-│   ├── InspectionsModal.tsx          # Physical & WhatsApp inspection tracker
-│   ├── JointVentureModal.tsx         # Nigerian JV equity sharing & milestones
-│   ├── MarketTrends.tsx              # Neighborhood price & rental yield index
-│   ├── MortgagePreQualifierModal.tsx # Commercial & NHF mortgage checker
-│   ├── Navbar.tsx                    # 3-Zone Top Bar with auth status & menu
-│   ├── NeighborhoodExplorer.tsx      # District infrastructure & amenities guide
-│   ├── NigerianTitleGuide.tsx        # Land Use Act legal due diligence guide
-│   ├── PostPropertyModal.tsx         # Agent listing submission portal
-│   ├── PropertyCard.tsx              # Zero-pill property card with WhatsApp CTA
-│   ├── PropertyDetailModal.tsx       # Gallery, specs, inspection & mortgage
-│   ├── PropertyRequestsModal.tsx     # Seeker requests & agent matching board
-│   └── TitleSearchServiceModal.tsx   # Cadastral charting & registry verification
-├── contexts/
-│   └── AuthContext.tsx               # Client authentication & inspection state
-├── lib/
-│   ├── auth.ts                       # JWT signing/verification & bcrypt helpers
-│   ├── db.ts                         # NeonDB PostgreSQL client & auto-migrations
-│   ├── property-data.ts              # Nigerian properties, requests, trends & agents
-│   └── utils.ts                      # Classnames & styling helper
+├── src/
+│   ├── app/                           # Next.js routes, API handlers, and global styles
+│   ├── assets/images/                 # Local property imagery
+│   ├── components/                    # Marketplace UI components
+│   ├── contexts/                      # Authentication and inspection state
+│   ├── hooks/                         # Shared React hooks
+│   └── lib/                           # Authentication, database, and property data
 ├── prisma/
-│   └── schema.prisma                 # Relational PostgreSQL models for Prisma
-├── public/
-│   └── images/                       # Architectural photography
-├── .env.example                      # Environment variables documentation
-└── package.json                      # Dependencies & scripts
+│   └── schema.prisma                  # Relational PostgreSQL models for Prisma
+├── public/                            # Public static assets
+├── .env.example                       # Environment variables documentation
+└── package.json                       # Dependencies & scripts
 ```
 
 ---
@@ -352,18 +318,24 @@ For instant testing without filling out forms, the Auth Modal provides 1-click l
 npm install
 ```
 
+Prisma Client is generated automatically before starting the development server or production build. To generate it manually, run:
+```bash
+npm run db:generate
+```
+
 ### Environment Variables
-Create a `.env.local` file based on `.env.example`:
+Create a project-root `.env` file based on `.env.example` (do not create `.env.local`):
 ```env
 # NeonDB Serverless PostgreSQL Connection String
-DATABASE_URL="postgresql://user:password@ep-xyz.region.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL="postgresql://USER:PASSWORD@YOUR_NEON_HOST/neondb?sslmode=require"
 
 # JWT Secret for Session Authentication
-JWT_SECRET="your_custom_secure_jwt_secret_key"
+JWT_SECRET="replace_with_a_unique_random_secret"
 
 # Gemini API Key (Server-side)
-GEMINI_API_KEY="your_gemini_api_key"
+GEMINI_API_KEY="replace_with_your_gemini_api_key"
 ```
+Generate `JWT_SECRET` locally with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Keep `.env` private; it is ignored by Git.
 
 ### Development Server
 ```bash
