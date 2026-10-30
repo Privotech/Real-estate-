@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { X, Check, Trash2, MapPin, DollarSign, Bed, Bath, ShieldCheck } from 'lucide-react';
 import { Property, formatNaira, formatUSD } from '@/lib/property-data';
 
@@ -74,17 +75,18 @@ export function CompareModal({
                           </button>
                         </div>
                         <div
-                          className="aspect-16/10 rounded-lg overflow-hidden mb-2 bg-slate-200 cursor-pointer"
+                          className="relative aspect-16/10 rounded-lg overflow-hidden mb-2 bg-slate-200 cursor-pointer"
                           onClick={() => {
                             onClose();
                             onSelectProperty(p);
                           }}
                         >
-                          <img
-                            src={p.images[0]}
+                          <Image
+                            src={p.images[0] || '/images/hero_lekki_mansion_1792681047972.jpg'}
                             alt={p.title}
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
+                            fill
+                            sizes="(max-width: 640px) 80vw, 220px"
+                            className="object-cover"
                           />
                         </div>
                         <h4

@@ -6,6 +6,7 @@ interface FooterProps {
   onSelectCategory: (cat: string) => void;
   onOpenAiAdvisor: () => void;
   onOpenPostProperty: () => void;
+  canPostProperty: boolean;
   onOpenRequests?: () => void;
   onOpenClosingCalc?: () => void;
   onOpenAgentDirectory?: () => void;
@@ -18,6 +19,7 @@ export function Footer({
   onSelectCategory,
   onOpenAiAdvisor,
   onOpenPostProperty,
+  canPostProperty,
   onOpenRequests,
   onOpenClosingCalc,
   onOpenAgentDirectory,
@@ -27,7 +29,7 @@ export function Footer({
 }: FooterProps) {
   return (
     <footer className="bg-slate-900 text-slate-400 text-xs border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-10">
           {/* Brand Info */}
           <div className="col-span-2 space-y-3">
@@ -160,14 +162,16 @@ export function Footer({
                   Verified Estate Agents Directory
                 </button>
               </li>
-              <li>
-                <button
-                  onClick={onOpenPostProperty}
-                  className="hover:text-emerald-400 transition cursor-pointer text-left text-emerald-400 font-medium"
-                >
-                  Post a Property (Free)
-                </button>
-              </li>
+              {canPostProperty && (
+                <li>
+                  <button
+                    onClick={onOpenPostProperty}
+                    className="hover:text-emerald-400 transition cursor-pointer text-left text-emerald-400 font-medium"
+                  >
+                    Post a Property (Free)
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   X,
   MapPin,
@@ -192,11 +193,12 @@ export function PropertyDetailModal({
             {/* Gallery Column (7 cols) */}
             <div className="lg:col-span-7 space-y-3">
               <div className="relative aspect-16/10 rounded-xl overflow-hidden bg-slate-900">
-                <img
-                  src={property.images[activeImageIndex] || property.images[0]}
+                <Image
+                  src={property.images[activeImageIndex] || property.images[0] || '/images/hero_lekki_mansion_1792681047972.jpg'}
                   alt={property.title}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 60vw"
+                  className="object-cover"
                 />
               </div>
 
@@ -213,11 +215,12 @@ export function PropertyDetailModal({
                           : 'border-transparent opacity-70 hover:opacity-100'
                       }`}
                     >
-                      <img
+                      <Image
                         src={img}
                         alt={`Thumbnail ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
+                        fill
+                        sizes="80px"
+                        className="object-cover"
                       />
                     </button>
                   ))}

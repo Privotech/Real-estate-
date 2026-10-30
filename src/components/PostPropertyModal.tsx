@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { X, Check, Upload, Building, MapPin, DollarSign, Bed, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import {
   Property,
@@ -365,7 +366,7 @@ export function PostPropertyModal({
                       selectedImage === item.url ? 'border-emerald-700 ring-2 ring-emerald-500' : 'border-transparent opacity-75'
                     }`}
                   >
-                    <img src={item.url} alt={item.label} className="w-full h-full object-cover" />
+                    <Image src={item.url} alt={item.label} fill sizes="25vw" className="object-cover" />
                     <span className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-[9px] px-1 rounded truncate">
                       {item.label}
                     </span>

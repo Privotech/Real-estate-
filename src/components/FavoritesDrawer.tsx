@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { X, Heart, Trash2, ArrowRight } from 'lucide-react';
 import { Property, formatNaira, formatUSD } from '@/lib/property-data';
 
@@ -59,17 +60,18 @@ export function FavoritesDrawer({
                 className="flex gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-slate-300 transition"
               >
                 <div
-                  className="w-24 h-20 rounded-lg overflow-hidden bg-slate-200 shrink-0 cursor-pointer"
+                  className="relative w-24 h-20 rounded-lg overflow-hidden bg-slate-200 shrink-0 cursor-pointer"
                   onClick={() => {
                     onClose();
                     onSelectProperty(prop);
                   }}
                 >
-                  <img
-                    src={prop.images[0]}
+                  <Image
+                    src={prop.images[0] || '/images/hero_lekki_mansion_1792681047972.jpg'}
                     alt={prop.title}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
                   />
                 </div>
 

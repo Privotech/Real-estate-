@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Search, MapPin, Home, DollarSign, Bed, Filter, CheckCircle2 } from 'lucide-react';
 import {
   NIGERIAN_STATES,
@@ -85,19 +86,21 @@ export function HeroSearch({
   };
 
   return (
-    <section className="relative bg-slate-900 text-white overflow-hidden">
+    <section className="relative w-full bg-slate-900 text-white overflow-hidden">
       {/* Background Hero Image with measured scrim */}
       <div className="absolute inset-0 z-0">
-        <img
+        <Image
           src="/images/hero_lekki_mansion_1792681047972.jpg"
           alt="Luxury Nigerian contemporary duplex in Lekki"
-          className="w-full h-full object-cover object-center opacity-40 scale-102 transform duration-1000"
-          referrerPolicy="no-referrer"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[60%_center] opacity-50 scale-102 transform duration-1000"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/65 to-slate-900/40" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-16 lg:pb-20">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-12 sm:pt-12 sm:pb-16 lg:pt-16 lg:pb-20">
         <div className="max-w-3xl mb-8">
           <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-3">
             <span>Verified Nigerian Real Estate</span>

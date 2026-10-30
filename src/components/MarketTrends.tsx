@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   TrendingUp,
   MapPin,
@@ -30,7 +31,7 @@ export function MarketTrends({ currency, onConsultAi }: MarketTrendsProps) {
 
   return (
     <section className="bg-white py-12 lg:py-16 border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
@@ -66,11 +67,12 @@ export function MarketTrends({ currency, onConsultAi }: MarketTrendsProps) {
 
         {/* Feature Hero Card with Lagos Skyline */}
         <div className="relative rounded-2xl overflow-hidden mb-8 bg-slate-900 text-white min-h-[180px] flex items-center p-6 sm:p-8">
-          <img
+          <Image
             src="/images/lagos_skyline_aerial_1792862326152.jpg"
             alt="Aerial view of Lagos skyline and Lekki-Ikoyi link bridge"
-            className="absolute inset-0 w-full h-full object-cover opacity-35 object-center"
-            referrerPolicy="no-referrer"
+            fill
+            sizes="(max-width: 768px) 100vw, 80vw"
+            className="object-cover opacity-35 object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
 

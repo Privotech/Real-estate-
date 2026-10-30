@@ -39,7 +39,7 @@ export function NigerianTitleGuide() {
 
   return (
     <section className="bg-slate-100/70 border-y border-slate-200 py-12 lg:py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mb-8">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-2">
             <ShieldCheck className="w-4 h-4" />

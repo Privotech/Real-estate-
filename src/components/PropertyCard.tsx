@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import {
   Bed,
   Bath,
@@ -50,14 +51,14 @@ export function PropertyCard({
     <article className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-200 flex flex-col">
       {/* Media Slot - 4:3 Aspect Ratio with Zero-Broken-Image Policy */}
       <div className="relative aspect-4/3 w-full bg-slate-800 overflow-hidden cursor-pointer" onClick={() => onSelectProperty(property)}>
-        <img
+        <Image
           src={property.images[0] || '/images/hero_lekki_mansion_1792681047972.jpg'}
           alt={property.title}
-          className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-500"
-          referrerPolicy="no-referrer"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+          className="object-cover group-hover:scale-104 transition-transform duration-500"
           onError={(e) => {
-            // Styled graceful CSS fallback
-            (e.target as HTMLImageElement).src = '/images/hero_lekki_mansion_1792681047972.jpg';
+            e.currentTarget.src = '/images/hero_lekki_mansion_1792681047972.jpg';
           }}
         />
 

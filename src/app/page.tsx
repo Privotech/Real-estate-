@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   INITIAL_PROPERTIES,
   INITIAL_REQUESTS,
@@ -49,6 +50,9 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const canPostProperty = user?.role === 'AGENT' || user?.role === 'DEVELOPER';
+
   // Master Property List
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
 
@@ -84,6 +88,9 @@ export default function HomePage() {
   // Modals & Drawers
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isPostModalOpen, setIsPostModalOpen] = useState<boolean>(false);
+  const openPostProperty = () => {
+    if (canPostProperty) setIsPostModalOpen(true);
+  };
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState<boolean>(false);
@@ -312,7 +319,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 pb-16 md:pb-0">
+    <div className="min-h-screen w-full flex flex-col bg-slate-50 text-slate-900 pb-16 md:pb-0">
       {/* Top Bar Contract (1 Row, 3 Zones) */}
       <Navbar
         activeTab={category}
@@ -323,7 +330,7 @@ export default function HomePage() {
         compareCount={compareIds.length}
         onOpenFavorites={() => setIsFavoritesOpen(true)}
         onOpenCompare={() => setIsCompareModalOpen(true)}
-        onOpenPostProperty={() => setIsPostModalOpen(true)}
+        onOpenPostProperty={openPostProperty}
         onOpenAiAdvisor={() => setIsAiModalOpen(true)}
         onOpenRequests={() => setIsRequestsModalOpen(true)}
         onOpenClosingCalc={() => setIsClosingCalcOpen(true)}
@@ -336,7 +343,7 @@ export default function HomePage() {
         onOpenInspections={() => setIsInspectionsModalOpen(true)}
       />
 
-      <main className="flex-1">
+      <main className="w-full min-w-0 flex-1">
         {/* Section 1: Hero Section & Nigerian Search Console */}
         <HeroSearch
           category={category}
@@ -364,7 +371,7 @@ export default function HomePage() {
         />
 
         {/* Section 2: Property Listings Catalog */}
-        <section id="listings-catalog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+        <section id="listings-catalog" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
           {/* Catalog Header & View Controls Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
             <div>
@@ -591,12 +598,14 @@ export default function HomePage() {
                   <Bell className="w-3.5 h-3.5 text-emerald-800" />
                   <span>Alert Me When Listed</span>
                 </button>
-                <button
-                  onClick={() => setIsPostModalOpen(true)}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg transition cursor-pointer"
-                >
-                  Post This Property
-                </button>
+                {canPostProperty && (
+                  <button
+                    onClick={openPostProperty}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg transition cursor-pointer"
+                  >
+                    Post This Property
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -642,7 +651,7 @@ export default function HomePage() {
 
         {/* Call to action for Agents & Property Owners */}
         <section className="bg-emerald-900 text-white py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1.5 max-w-xl text-center md:text-left">
               <h3 className="text-xl sm:text-2xl font-bold tracking-tight">
                 Are you a Property Owner, Developer or Real Estate Agent?
@@ -651,13 +660,15 @@ export default function HomePage() {
                 Reach over 2.5 million active home seekers, diaspora investors, and corporate tenants across Nigeria and worldwide.
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsPostModalOpen(true)}
-                className="px-5 py-2.5 bg-white text-emerald-950 hover:bg-emerald-50 font-bold rounded-lg transition text-xs sm:text-sm cursor-pointer whitespace-nowrap shadow-xs"
-              >
-                Post Your Property Free
-              </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {canPostProperty && (
+                <button
+                  onClick={openPostProperty}
+                  className="px-5 py-2.5 bg-white text-emerald-950 hover:bg-emerald-50 font-bold rounded-lg transition text-xs sm:text-sm cursor-pointer whitespace-nowrap shadow-xs"
+                >
+                  Post Your Property Free
+                </button>
+              )}
               <button
                 onClick={() => setIsAiModalOpen(true)}
                 className="px-4 py-2.5 bg-emerald-800/80 hover:bg-emerald-800 text-white font-medium border border-emerald-600 rounded-lg transition text-xs sm:text-sm cursor-pointer whitespace-nowrap flex items-center gap-1.5"
@@ -678,7 +689,8 @@ export default function HomePage() {
           if (resultsElement) resultsElement.scrollIntoView({ behavior: 'smooth' });
         }}
         onOpenAiAdvisor={() => setIsAiModalOpen(true)}
-        onOpenPostProperty={() => setIsPostModalOpen(true)}
+        onOpenPostProperty={openPostProperty}
+        canPostProperty={canPostProperty}
         onOpenRequests={() => setIsRequestsModalOpen(true)}
         onOpenClosingCalc={() => setIsClosingCalcOpen(true)}
         onOpenAgentDirectory={() => setIsAgentDirectoryOpen(true)}
@@ -688,7 +700,8 @@ export default function HomePage() {
       />
 
       {/* Floating Mobile Bottom Navigation Bar (Mobile only) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 flex items-center justify-between text-[11px] font-medium text-slate-600">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200">
+        <nav className={"w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 grid " + (canPostProperty ? "grid-cols-5" : "grid-cols-4") + " text-[11px] font-medium text-slate-600"} aria-label="Mobile navigation">
         <button
           onClick={() => {
             const el = document.getElementById('listings-catalog');
@@ -724,15 +737,18 @@ export default function HomePage() {
           <span>AI Advisor</span>
         </button>
 
-        <button
-          onClick={() => setIsPostModalOpen(true)}
-          className="flex flex-col items-center gap-0.5 cursor-pointer text-emerald-800 font-bold"
-        >
-          <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center text-xs">
-            +
-          </span>
-          <span>Post</span>
-        </button>
+        {canPostProperty && (
+          <button
+            onClick={openPostProperty}
+            className="w-full flex flex-col items-center gap-0.5 cursor-pointer text-emerald-800 font-bold"
+          >
+            <span className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center text-xs">
+              +
+            </span>
+            <span>Post</span>
+          </button>
+        )}
+        </nav>
       </div>
 
       {/* Modals & Drawers */}
@@ -752,7 +768,7 @@ export default function HomePage() {
       />
 
       <PostPropertyModal
-        isOpen={isPostModalOpen}
+        isOpen={isPostModalOpen && canPostProperty}
         onClose={() => setIsPostModalOpen(false)}
         onAddProperty={handleAddProperty}
       />

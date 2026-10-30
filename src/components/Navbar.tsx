@@ -66,6 +66,7 @@ export function Navbar({
   onOpenInspections,
 }: NavbarProps) {
   const { user, logout, inspections } = useAuth();
+  const canPostProperty = user?.role === 'AGENT' || user?.role === 'DEVELOPER';
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -158,10 +159,10 @@ export function Navbar({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4 h-16">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-1 sm:gap-4 h-16">
           {/* Zone 1: Wordmark Logo */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <button
               onClick={() => {
                 setActiveTab('all');
@@ -169,12 +170,12 @@ export function Navbar({
               }}
               className="text-left group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 rounded-md"
             >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-800 text-white flex items-center justify-center font-bold text-base tracking-tighter shadow-xs">
+              <div className="flex items-center gap-1.5 sm:gap-2.5">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-800 text-white flex items-center justify-center font-bold text-sm sm:text-base tracking-tighter shadow-xs">
                   NPC
                 </div>
                 <div>
-                  <span className="text-base font-bold tracking-tight text-slate-900 whitespace-nowrap block leading-tight">
+                  <span className="text-[11px] sm:text-base font-bold tracking-tight text-slate-900 whitespace-nowrap block leading-tight">
                     Nigeria Property Centre
                   </span>
                   <span className="text-[10px] text-slate-500 tracking-normal block hidden sm:block">
@@ -279,12 +280,12 @@ export function Navbar({
           </nav>
 
           {/* Zone 3: Essential action controls & Post Property */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Currency switcher */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
               <button
                 onClick={() => setCurrency('NGN')}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                className={`px-1 sm:px-2 py-1 text-[10px] sm:text-xs font-semibold rounded-md transition-all cursor-pointer ${
                   currency === 'NGN'
                     ? 'bg-white text-emerald-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -295,7 +296,7 @@ export function Navbar({
               </button>
               <button
                 onClick={() => setCurrency('USD')}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                className={`px-1 sm:px-2 py-1 text-[10px] sm:text-xs font-semibold rounded-md transition-all cursor-pointer ${
                   currency === 'USD'
                     ? 'bg-white text-emerald-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -324,7 +325,7 @@ export function Navbar({
             {/* Favorites Icon Button */}
             <button
               onClick={onOpenFavorites}
-              className="p-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors relative cursor-pointer"
+              className="p-1.5 sm:p-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors relative cursor-pointer"
               title="Saved Properties"
               aria-label="Saved Properties"
             >
@@ -339,7 +340,7 @@ export function Navbar({
             {/* Inspections Icon Button */}
             <button
               onClick={onOpenInspections}
-              className="p-2 text-slate-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors relative cursor-pointer"
+              className="p-1.5 sm:p-2 text-slate-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors relative cursor-pointer"
               title="My Scheduled Inspections"
               aria-label="My Scheduled Inspections"
             >
@@ -395,13 +396,15 @@ export function Navbar({
                         <Heart className="w-3.5 h-3.5 text-rose-600" />
                         <span>Saved Properties ({favoritesCount})</span>
                       </button>
-                      <button
-                        onClick={onOpenPostProperty}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-slate-100 rounded-lg text-left cursor-pointer"
-                      >
-                        <PlusCircle className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>Post a Property Listing</span>
-                      </button>
+                      {canPostProperty && (
+                        <button
+                          onClick={onOpenPostProperty}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-slate-100 rounded-lg text-left cursor-pointer"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Post a Property Listing</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="pt-1 border-t border-slate-100">
@@ -425,19 +428,20 @@ export function Navbar({
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
               >
                 <LogIn className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Sign In</span>
+                <span className="hidden sm:inline">Sign In</span>
               </button>
             )}
 
-            {/* Primary Action Button */}
-            <button
-              onClick={onOpenPostProperty}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Post Property</span>
-              <span className="sm:hidden">Post</span>
-            </button>
+            {canPostProperty && (
+              <button
+                onClick={onOpenPostProperty}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-emerald-800 hover:bg-emerald-900 rounded-lg shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Post Property</span>
+                <span className="sm:hidden">Post</span>
+              </button>
+            )}
 
             {/* Mobile Hamburger toggle */}
             <button
