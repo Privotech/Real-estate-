@@ -6,7 +6,10 @@ export async function GET(req: NextRequest) {
   try {
     const authPayload = extractAuthUser(req);
     if (!authPayload) {
-      return NextResponse.json({ savedProperties: [] });
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (authPayload.role !== 'SEEKER') {
+      return NextResponse.json({ error: 'Only buyers can save properties' }, { status: 403 });
     }
 
     const savedPropertyIds = await getUserSavedProperties(authPayload.userId);
@@ -22,6 +25,9 @@ export async function POST(req: NextRequest) {
     const authPayload = extractAuthUser(req);
     if (!authPayload) {
       return NextResponse.json({ error: 'Authentication required to save properties' }, { status: 401 });
+    }
+    if (authPayload.role !== 'SEEKER') {
+      return NextResponse.json({ error: 'Only buyers can save properties' }, { status: 403 });
     }
 
     const body = await req.json();

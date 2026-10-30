@@ -322,20 +322,21 @@ export function Navbar({
               </button>
             )}
 
-            {/* Favorites Icon Button */}
-            <button
-              onClick={onOpenFavorites}
-              className="p-1.5 sm:p-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors relative cursor-pointer"
-              title="Saved Properties"
-              aria-label="Saved Properties"
-            >
-              <Heart className="w-4 h-4" />
-              {favoritesCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-[10px] font-bold text-white flex items-center justify-center">
-                  {favoritesCount}
-                </span>
-              )}
-            </button>
+            {user?.role === 'SEEKER' && (
+              <button
+                onClick={onOpenFavorites}
+                className="p-1.5 sm:p-2 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors relative cursor-pointer"
+                title="Saved Properties"
+                aria-label="Saved Properties"
+              >
+                <Heart className="w-4 h-4" />
+                {favoritesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-[10px] font-bold text-white flex items-center justify-center">
+                    {favoritesCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Inspections Icon Button */}
             <button
@@ -389,13 +390,15 @@ export function Navbar({
                         <Calendar className="w-3.5 h-3.5 text-emerald-700" />
                         <span>My Inspections ({inspections.length})</span>
                       </button>
-                      <button
-                        onClick={onOpenFavorites}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-slate-100 rounded-lg text-left cursor-pointer"
-                      >
-                        <Heart className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Saved Properties ({favoritesCount})</span>
-                      </button>
+                      {user.role === 'SEEKER' && (
+                        <button
+                          onClick={onOpenFavorites}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-slate-100 rounded-lg text-left cursor-pointer"
+                        >
+                          <Heart className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Saved Properties ({favoritesCount})</span>
+                        </button>
+                      )}
                       {canPostProperty && (
                         <button
                           onClick={onOpenPostProperty}

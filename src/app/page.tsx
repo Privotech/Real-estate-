@@ -51,6 +51,7 @@ import {
 
 export default function HomePage() {
   const { user } = useAuth();
+  const canSaveProperties = user?.role === 'SEEKER';
   const canPostProperty = user?.role === 'AGENT' || user?.role === 'DEVELOPER';
 
   // Master Property List
@@ -93,7 +94,7 @@ export default function HomePage() {
   };
   const [isAiModalOpen, setIsAiModalOpen] = useState<boolean>(false);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
-  const [isFavoritesOpen, setIsFavoritesOpen] = useState<boolean>(false);
+  const [favoritesOpenForUser, setFavoritesOpenForUser] = useState<string | null>(null);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState<boolean>(false);
   const [isClosingCalcOpen, setIsClosingCalcOpen] = useState<boolean>(false);
   const [isAgentDirectoryOpen, setIsAgentDirectoryOpen] = useState<boolean>(false);
@@ -131,14 +132,49 @@ export default function HomePage() {
   }, []);
 
   // Favorites & Compare IDs
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(['npc-lekki-001']);
+  const [savedProperties, setSavedProperties] = useState<{ userId: string; ids: string[] } | null>(null);
+  const favoriteIds = useMemo(
+    () => (canSaveProperties && savedProperties?.userId === user?.id ? savedProperties.ids : []),
+    [canSaveProperties, savedProperties, user?.id],
+  );
   const [compareIds, setCompareIds] = useState<string[]>([]);
 
-  // Toggle Favorite
+  useEffect(() => {
+    if (!user || !canSaveProperties) return;
+
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = localStorage.getItem(`npc_saved_properties_${user.id}`);
+        const parsed: unknown = saved ? JSON.parse(saved) : [];
+        if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) {
+          setSavedProperties({ userId: user.id, ids: parsed });
+        } else {
+          console.warn('Saved properties data is invalid; ignoring the stored value.');
+          setSavedProperties({ userId: user.id, ids: [] });
+        }
+      } catch (error) {
+        console.warn('Could not load saved properties from this browser.', error);
+        setSavedProperties({ userId: user.id, ids: [] });
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [user, canSaveProperties]);
+
   const handleToggleFavorite = (id: string) => {
-    setFavoriteIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    if (!user || !canSaveProperties) return;
+
+    const nextFavorites = favoriteIds.includes(id)
+      ? favoriteIds.filter((item) => item !== id)
+      : [...favoriteIds, id];
+
+    try {
+      localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(nextFavorites));
+      setSavedProperties({ userId: user.id, ids: nextFavorites });
+    } catch (error) {
+      console.error('Could not save this property in the browser.', error);
+      alert('Could not update your saved properties. Please check your browser storage and try again.');
+    }
   };
 
   // Toggle Compare
@@ -326,9 +362,9 @@ export default function HomePage() {
         setActiveTab={(cat) => setCategory(cat)}
         currency={currency}
         setCurrency={handleSetCurrency}
-        favoritesCount={favoriteIds.length}
+        favoritesCount={canSaveProperties ? favoriteIds.length : 0}
         compareCount={compareIds.length}
-        onOpenFavorites={() => setIsFavoritesOpen(true)}
+        onOpenFavorites={() => canSaveProperties && user && setFavoritesOpenForUser(user.id)}
         onOpenCompare={() => setIsCompareModalOpen(true)}
         onOpenPostProperty={openPostProperty}
         onOpenAiAdvisor={() => setIsAiModalOpen(true)}
@@ -621,7 +657,8 @@ export default function HomePage() {
                   key={prop.id}
                   property={prop}
                   currency={currency}
-                  isFavorite={favoriteIds.includes(prop.id)}
+                  isFavorite={canSaveProperties && favoriteIds.includes(prop.id)}
+                  canFavorite={canSaveProperties}
                   isCompared={compareIds.includes(prop.id)}
                   onToggleFavorite={handleToggleFavorite}
                   onToggleCompare={handleToggleCompare}
@@ -755,7 +792,8 @@ export default function HomePage() {
       <PropertyDetailModal
         property={selectedProperty}
         currency={currency}
-        isFavorite={selectedProperty ? favoriteIds.includes(selectedProperty.id) : false}
+        isFavorite={canSaveProperties && selectedProperty ? favoriteIds.includes(selectedProperty.id) : false}
+        canFavorite={canSaveProperties}
         onToggleFavorite={handleToggleFavorite}
         onClose={() => setSelectedProperty(null)}
         onOpenJVModal={() => setIsJVModalOpen(true)}
@@ -818,8 +856,8 @@ export default function HomePage() {
       />
 
       <FavoritesDrawer
-        isOpen={isFavoritesOpen}
-        onClose={() => setIsFavoritesOpen(false)}
+        isOpen={canSaveProperties && favoritesOpenForUser === user?.id}
+        onClose={() => setFavoritesOpenForUser(null)}
         favorites={favoritesList}
         currency={currency}
         onRemoveFavorite={handleToggleFavorite}

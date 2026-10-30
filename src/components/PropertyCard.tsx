@@ -19,6 +19,7 @@ interface PropertyCardProps {
   property: Property;
   currency: 'NGN' | 'USD';
   isFavorite: boolean;
+  canFavorite: boolean;
   isCompared: boolean;
   onToggleFavorite: (id: string) => void;
   onToggleCompare: (id: string) => void;
@@ -30,6 +31,7 @@ export function PropertyCard({
   property,
   currency,
   isFavorite,
+  canFavorite,
   isCompared,
   onToggleFavorite,
   onToggleCompare,
@@ -102,21 +104,23 @@ export function PropertyCard({
             <Layers className="w-3.5 h-3.5" />
           </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(property.id);
-            }}
-            className={`p-2 rounded-full backdrop-blur-md transition-colors cursor-pointer ${
-              isFavorite
-                ? 'bg-rose-600 text-white'
-                : 'bg-slate-900/60 text-white hover:bg-slate-900/90'
-            }`}
-            title={isFavorite ? 'Remove from Saved' : 'Save Property'}
-          >
-            <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
+          {canFavorite && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(property.id);
+              }}
+              className={`p-2 rounded-full backdrop-blur-md transition-colors cursor-pointer ${
+                isFavorite
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-slate-900/60 text-white hover:bg-slate-900/90'
+              }`}
+              title={isFavorite ? 'Remove from Saved' : 'Save Property'}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* Bottom Image Strip: Location */}

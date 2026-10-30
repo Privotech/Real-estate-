@@ -27,6 +27,7 @@ interface PropertyDetailModalProps {
   property: Property | null;
   currency: 'NGN' | 'USD';
   isFavorite: boolean;
+  canFavorite: boolean;
   onToggleFavorite: (id: string) => void;
   onClose: () => void;
   onOpenJVModal?: () => void;
@@ -36,6 +37,7 @@ export function PropertyDetailModal({
   property,
   currency,
   isFavorite,
+  canFavorite,
   onToggleFavorite,
   onClose,
   onOpenJVModal,
@@ -151,13 +153,15 @@ export function PropertyDetailModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => onToggleFavorite(property.id)}
-              className="p-2 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-              title="Save to favorites"
-            >
-              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-600 text-rose-600' : ''}`} />
-            </button>
+            {canFavorite && (
+              <button
+                onClick={() => onToggleFavorite(property.id)}
+                className="p-2 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                title={isFavorite ? 'Remove from saved properties' : 'Save to favorites'}
+              >
+                <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-600 text-rose-600' : ''}`} />
+              </button>
+            )}
             <button
               onClick={() => {
                 if (navigator.share) {
