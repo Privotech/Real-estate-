@@ -1,16 +1,18 @@
-import 'server-only';
 import { PrismaClient } from '@prisma/client';
 
-function getCleanDatabaseUrl(): string | undefined {
+export function getCleanDatabaseUrl(): string | undefined {
   const raw = process.env.DATABASE_URL;
   if (!raw) return undefined;
   const match = raw.match(/postgres(?:ql)?:\/\/[^\s'\"<>()]+/);
   return match ? match[0] : raw;
 }
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
 const cleanUrl = getCleanDatabaseUrl();
+if (cleanUrl) {
+  process.env.DATABASE_URL = cleanUrl;
+}
+
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const prisma =
   globalForPrisma.prisma ||
