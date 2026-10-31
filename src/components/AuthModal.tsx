@@ -16,6 +16,7 @@ import {
   Briefcase,
   Home,
   HardHat,
+  Heart,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -24,6 +25,7 @@ interface AuthModalProps {
   onClose: () => void;
   defaultTab?: 'login' | 'register';
   defaultRole?: 'SEEKER' | 'AGENT' | 'DEVELOPER';
+  notice?: string | null;
 }
 
 export function AuthModal({
@@ -31,6 +33,7 @@ export function AuthModal({
   onClose,
   defaultTab = 'login',
   defaultRole = 'SEEKER',
+  notice = null,
 }: AuthModalProps) {
   const { login, register, loading } = useAuth();
   const [tab, setTab] = useState<'login' | 'register'>(defaultTab);
@@ -163,7 +166,13 @@ export function AuthModal({
         </div>
 
         {/* Feedback Alerts */}
-        <div className="px-6 pt-4">
+        <div className="px-6 pt-4 space-y-2">
+          {notice && !error && !successMsg && (
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs">
+              <Heart className="w-4 h-4 shrink-0 mt-0.5 text-rose-500 fill-rose-500" />
+              <span>{notice}</span>
+            </div>
+          )}
           {error && (
             <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />

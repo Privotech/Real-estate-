@@ -50,9 +50,10 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const canSaveProperties = user?.role === 'SEEKER';
   const canPostProperty = user?.role === 'AGENT' || user?.role === 'DEVELOPER';
+  const canFavoriteCards = !user || canSaveProperties;
 
   // Master Property List
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
@@ -102,6 +103,8 @@ export default function HomePage() {
   const [isPreQualifierOpen, setIsPreQualifierOpen] = useState<boolean>(false);
   const [isJVModalOpen, setIsJVModalOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalNotice, setAuthModalNotice] = useState<string | null>(null);
+  const [authModalRole, setAuthModalRole] = useState<'SEEKER' | 'AGENT' | 'DEVELOPER'>('SEEKER');
   const [isInspectionsModalOpen, setIsInspectionsModalOpen] = useState<boolean>(false);
   const [isPropertyAlertOpen, setIsPropertyAlertOpen] = useState<boolean>(false);
   const [savedAlertsCount, setSavedAlertsCount] = useState<number>(0);
@@ -131,7 +134,7 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Favorites & Compare IDs
+  // Favorites & Compare IDs - Backed by NeonDB PostgreSQL
   const [savedProperties, setSavedProperties] = useState<{ userId: string; ids: string[] } | null>(null);
   const favoriteIds = useMemo(
     () => (canSaveProperties && savedProperties?.userId === user?.id ? savedProperties.ids : []),
@@ -139,41 +142,120 @@ export default function HomePage() {
   );
   const [compareIds, setCompareIds] = useState<string[]>([]);
 
+  // Synchronize saved properties with NeonDB backend API
   useEffect(() => {
     if (!user || !canSaveProperties) return;
 
-    const timer = window.setTimeout(() => {
+    let isCancelled = false;
+
+    // 1. Immediate client hydrate from local cache in non-blocking callback
+    const timer = setTimeout(() => {
+      if (isCancelled) return;
       try {
         const saved = localStorage.getItem(`npc_saved_properties_${user.id}`);
-        const parsed: unknown = saved ? JSON.parse(saved) : [];
-        if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) {
-          setSavedProperties({ userId: user.id, ids: parsed });
-        } else {
-          console.warn('Saved properties data is invalid; ignoring the stored value.');
-          setSavedProperties({ userId: user.id, ids: [] });
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) {
+            setSavedProperties({ userId: user.id, ids: parsed });
+          }
         }
-      } catch (error) {
-        console.warn('Could not load saved properties from this browser.', error);
-        setSavedProperties({ userId: user.id, ids: [] });
+      } catch {
+        // ignore
       }
     }, 0);
 
-    return () => window.clearTimeout(timer);
-  }, [user, canSaveProperties]);
+    // 2. Authoritative sync with NeonDB database
+    if (token) {
+      fetch('/api/user/saved-properties', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (isCancelled || !data) return;
+          if (Array.isArray(data.savedProperties)) {
+            setSavedProperties({ userId: user.id, ids: data.savedProperties });
+            try {
+              localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(data.savedProperties));
+            } catch {
+              // ignore
+            }
+          }
+        })
+        .catch((err) => {
+          console.warn('Could not sync saved properties from NeonDB:', err);
+        });
+    }
 
-  const handleToggleFavorite = (id: string) => {
-    if (!user || !canSaveProperties) return;
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [user, canSaveProperties, token]);
 
-    const nextFavorites = favoriteIds.includes(id)
-      ? favoriteIds.filter((item) => item !== id)
-      : [...favoriteIds, id];
+  const handleToggleFavorite = async (id: string) => {
+    // Unauthenticated guest prompt
+    if (!user) {
+      setAuthModalRole('SEEKER');
+      setAuthModalNotice('Sign in as a Property Seeker (Buyer) to save and organize your favorite listings.');
+      setIsAuthModalOpen(true);
+      return;
+    }
 
+    // Non-seeker role check (Agents & Developers cannot save listings)
+    if (!canSaveProperties) {
+      alert('Saving properties is exclusive to Property Seekers (Buyers). Agents and Developers can post listings.');
+      return;
+    }
+
+    const currentIds = favoriteIds;
+    const isSaved = currentIds.includes(id);
+    const nextFavorites = isSaved
+      ? currentIds.filter((item) => item !== id)
+      : [...currentIds, id];
+
+    // Optimistic UI state update
+    setSavedProperties({ userId: user.id, ids: nextFavorites });
     try {
       localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(nextFavorites));
-      setSavedProperties({ userId: user.id, ids: nextFavorites });
-    } catch (error) {
-      console.error('Could not save this property in the browser.', error);
-      alert('Could not update your saved properties. Please check your browser storage and try again.');
+    } catch {
+      // ignore
+    }
+
+    // Persist to NeonDB database via API route
+    if (token) {
+      try {
+        const res = await fetch('/api/user/saved-properties', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ propertyId: id }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          // Revert optimistic state on failure
+          setSavedProperties({ userId: user.id, ids: currentIds });
+          try {
+            localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(currentIds));
+          } catch {
+            // ignore
+          }
+          alert(data.error || 'Failed to update saved property in database. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error persisting saved property to NeonDB:', err);
+        // Revert on network failure
+        setSavedProperties({ userId: user.id, ids: currentIds });
+        try {
+          localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(currentIds));
+        } catch {
+          // ignore
+        }
+      }
     }
   };
 
@@ -658,7 +740,7 @@ export default function HomePage() {
                   property={prop}
                   currency={currency}
                   isFavorite={canSaveProperties && favoriteIds.includes(prop.id)}
-                  canFavorite={canSaveProperties}
+                  canFavorite={canFavoriteCards}
                   isCompared={compareIds.includes(prop.id)}
                   onToggleFavorite={handleToggleFavorite}
                   onToggleCompare={handleToggleCompare}
@@ -793,7 +875,7 @@ export default function HomePage() {
         property={selectedProperty}
         currency={currency}
         isFavorite={canSaveProperties && selectedProperty ? favoriteIds.includes(selectedProperty.id) : false}
-        canFavorite={canSaveProperties}
+        canFavorite={canFavoriteCards}
         onToggleFavorite={handleToggleFavorite}
         onClose={() => setSelectedProperty(null)}
         onOpenJVModal={() => setIsJVModalOpen(true)}
@@ -866,7 +948,12 @@ export default function HomePage() {
 
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        defaultRole={authModalRole}
+        notice={authModalNotice}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setAuthModalNotice(null);
+        }}
       />
 
       <InspectionsModal

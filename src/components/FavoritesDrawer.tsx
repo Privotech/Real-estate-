@@ -31,9 +31,17 @@ export function FavoritesDrawer({
         <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2">
             <Heart className="w-4 h-4 text-rose-600 fill-rose-600" />
-            <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-              Saved Properties ({favorites.length})
-            </h3>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                  Saved Properties ({favorites.length})
+                </h3>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
+                  Synced
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">Buyer collection backed by NeonDB</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -49,8 +57,8 @@ export function FavoritesDrawer({
             <div className="text-center py-16 text-slate-400 space-y-2">
               <Heart className="w-8 h-8 mx-auto text-slate-300" />
               <p className="font-medium text-slate-600 text-sm">No saved properties yet</p>
-              <p className="text-xs">
-                Click the heart icon on any listing to save and compare properties later.
+              <p className="text-xs max-w-xs mx-auto">
+                Click the heart icon on any listing to bookmark it to your buyer account.
               </p>
             </div>
           ) : (
