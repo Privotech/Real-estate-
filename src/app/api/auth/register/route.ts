@@ -7,11 +7,23 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password, fullName, phone, role, agencyName, licenseNumber } = body;
 
-    if (!email || !password || !fullName || !phone) {
+    if (
+      typeof email !== 'string' ||
+      typeof password !== 'string' ||
+      typeof fullName !== 'string' ||
+      typeof phone !== 'string' ||
+      !email.trim() ||
+      !fullName.trim() ||
+      !phone.trim()
+    ) {
       return NextResponse.json(
         { error: 'Email, password, full name, and phone number are required.' },
         { status: 400 }
       );
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 });
     }
 
     if (password.length < 6) {
@@ -30,7 +42,10 @@ export async function POST(req: NextRequest) {
     }
 
     const password_hash = await hashPassword(password);
-    const validRole = ['SEEKER', 'AGENT', 'DEVELOPER'].includes(role) ? role : 'SEEKER';
+    const validRole =
+      typeof role === 'string' && ['SEEKER', 'AGENT', 'DEVELOPER'].includes(role)
+        ? (role as 'SEEKER' | 'AGENT' | 'DEVELOPER')
+        : 'SEEKER';
 
     const newUser = await createUser({
       email,
@@ -59,7 +74,6 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
       message: 'Account successfully registered.',
-      token,
       user: safeUser,
     });
 

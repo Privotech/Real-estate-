@@ -54,7 +54,7 @@ export interface DbPropertyAlert {
 }
 
 // ---------------------------------------------------------------------
-// In-Memory Fallback Store (Ensures 100% Uptime if Neon credentials expire)
+// In-memory data is for local development only and is never used in production.
 // ---------------------------------------------------------------------
 const memoryUsers: DbUser[] = [
   {
@@ -152,9 +152,18 @@ let dbStatus: 'unknown' | 'connected' | 'unavailable' = 'unknown';
 let lastCheckTime = 0;
 const CHECK_INTERVAL_MS = 60 * 1000; // recheck every 60 seconds
 
+function rethrowInProduction(error: unknown): void {
+  if (process.env.NODE_ENV === 'production') {
+    throw error;
+  }
+}
+
 export async function isDatabaseHealthy(): Promise<boolean> {
   const now = Date.now();
   if (dbStatus !== 'unknown' && now - lastCheckTime < CHECK_INTERVAL_MS) {
+    if (dbStatus === 'unavailable' && process.env.NODE_ENV === 'production') {
+      throw new Error('The production database is unavailable.');
+    }
     return dbStatus === 'connected';
   }
 
@@ -162,13 +171,16 @@ export async function isDatabaseHealthy(): Promise<boolean> {
   if (!cleanUrl || cleanUrl.includes('YOUR_NEON_DATABASE_URL') || cleanUrl.includes('ep-xyz')) {
     dbStatus = 'unavailable';
     lastCheckTime = now;
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('DATABASE_URL must be configured for production.');
+    }
     return false;
   }
 
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    // Quick test query with 2500ms timeout to avoid hanging on slow network or socket timeouts
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Connection check timeout')), 2500)
+      (timeout = setTimeout(() => reject(new Error('Connection check timeout')), 2500))
     );
     await Promise.race([prisma.$queryRaw`SELECT 1`, timeoutPromise]);
     dbStatus = 'connected';
@@ -183,7 +195,12 @@ export async function isDatabaseHealthy(): Promise<boolean> {
     } else {
       console.warn('[Database Notice] NeonDB currently unavailable. Running in local fallback mode.');
     }
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('The production database health check failed.');
+    }
     return false;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 
@@ -226,8 +243,8 @@ export async function findUserByEmail(email: string): Promise<DbUser | null> {
           created_at: user.createdAt.toISOString(),
         };
       }
-    } catch {
-      // Fall through to memory store if query fails
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -256,8 +273,8 @@ export async function findUserById(id: string): Promise<DbUser | null> {
           created_at: user.createdAt.toISOString(),
         };
       }
-    } catch {
-      // Fall through to memory store if query fails
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -274,7 +291,7 @@ export async function createUser(userData: {
   agency_name?: string;
   license_number?: string;
 }): Promise<DbUser> {
-  const isVerified = userData.role === 'AGENT' ? Boolean(userData.license_number) : false;
+  const isVerified = false;
   
   if (await isDatabaseHealthy()) {
     try {
@@ -304,8 +321,8 @@ export async function createUser(userData: {
         avatar_url: created.avatarUrl || undefined,
         created_at: created.createdAt.toISOString(),
       };
-    } catch {
-      // Fall through to memory store if Neon insert fails
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -368,8 +385,8 @@ export async function createInspection(data: {
         status: created.status as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED',
         created_at: created.createdAt.toISOString(),
       };
-    } catch {
-      // Fall through to memory store
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -414,8 +431,8 @@ export async function getUserInspections(userId: string): Promise<DbInspection[]
         status: item.status as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED',
         created_at: item.createdAt.toISOString(),
       }));
-    } catch {
-      // Fall through to memory store
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -457,8 +474,8 @@ export async function toggleSaveProperty(
         });
         return { saved: true, propertyId };
       }
-    } catch {
-      // Fall through to memory store
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -486,8 +503,8 @@ export async function getUserSavedProperties(userId: string): Promise<string[]> 
         select: { propertyId: true },
       });
       return saved.map((s) => s.propertyId);
-    } catch {
-      // Fall through to memory store
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -569,8 +586,8 @@ export async function createPropertyAlert(data: {
         matches_count: alert.matchesCount,
         created_at: alert.createdAt.toISOString(),
       };
-    } catch {
-      // Fall through to memory store
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -644,8 +661,8 @@ export async function getPropertyAlerts(options?: {
         matches_count: a.matchesCount,
         created_at: a.createdAt.toISOString(),
       }));
-    } catch {
-      // Fall through to memory store
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 
@@ -664,8 +681,8 @@ export async function deletePropertyAlert(id: string): Promise<boolean> {
         where: { id },
       });
       return true;
-    } catch {
-      // Fall through to memory store
+    } catch (error) {
+      rethrowInProduction(error);
     }
   }
 

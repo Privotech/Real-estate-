@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const canSaveProperties = user?.role === 'SEEKER';
   const canPostProperty = user?.role === 'AGENT' || user?.role === 'DEVELOPER';
   const canFavoriteCards = !user || canSaveProperties;
@@ -122,17 +122,21 @@ export default function HomePage() {
       }
 
       // Fetch real-time alert count directly from NeonDB
-      fetch('/api/alerts')
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && typeof data.count === 'number') {
-            setSavedAlertsCount(data.count);
-          }
-        })
-        .catch(() => {});
+      if (user) {
+        fetch('/api/alerts')
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data && typeof data.count === 'number') {
+              setSavedAlertsCount(data.count);
+            }
+          })
+          .catch((error) => console.warn('Could not load property alert count:', error));
+      } else {
+        setSavedAlertsCount(0);
+      }
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [user]);
 
   // Favorites & Compare IDs - Backed by NeonDB PostgreSQL
   const [savedProperties, setSavedProperties] = useState<{ userId: string; ids: string[] } | null>(null);
@@ -142,13 +146,12 @@ export default function HomePage() {
   );
   const [compareIds, setCompareIds] = useState<string[]>([]);
 
-  // Synchronize saved properties with NeonDB backend API
+  // Synchronize saved properties with the cookie-authenticated backend API
   useEffect(() => {
     if (!user || !canSaveProperties) return;
 
     let isCancelled = false;
 
-    // 1. Immediate client hydrate from local cache in non-blocking callback
     const timer = setTimeout(() => {
       if (isCancelled) return;
       try {
@@ -164,38 +167,30 @@ export default function HomePage() {
       }
     }, 0);
 
-    // 2. Authoritative sync with NeonDB database
-    if (token) {
-      fetch('/api/user/saved-properties', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (isCancelled || !data) return;
-          if (Array.isArray(data.savedProperties)) {
-            setSavedProperties({ userId: user.id, ids: data.savedProperties });
-            try {
-              localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(data.savedProperties));
-            } catch {
-              // ignore
-            }
+    fetch('/api/user/saved-properties')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isCancelled || !data) return;
+        if (Array.isArray(data.savedProperties)) {
+          setSavedProperties({ userId: user.id, ids: data.savedProperties });
+          try {
+            localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(data.savedProperties));
+          } catch {
+            // ignore
           }
-        })
-        .catch((err) => {
-          console.warn('Could not sync saved properties from NeonDB:', err);
-        });
-    }
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not sync saved properties from the API:', err);
+      });
 
     return () => {
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [user, canSaveProperties, token]);
+  }, [user, canSaveProperties]);
 
   const handleToggleFavorite = async (id: string) => {
-    // Unauthenticated guest prompt
     if (!user) {
       setAuthModalRole('SEEKER');
       setAuthModalNotice('Sign in as a Property Seeker (Buyer) to save and organize your favorite listings.');
@@ -203,7 +198,6 @@ export default function HomePage() {
       return;
     }
 
-    // Non-seeker role check (Agents & Developers cannot save listings)
     if (!canSaveProperties) {
       alert('Saving properties is exclusive to Property Seekers (Buyers). Agents and Developers can post listings.');
       return;
@@ -215,7 +209,6 @@ export default function HomePage() {
       ? currentIds.filter((item) => item !== id)
       : [...currentIds, id];
 
-    // Optimistic UI state update
     setSavedProperties({ userId: user.id, ids: nextFavorites });
     try {
       localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(nextFavorites));
@@ -223,38 +216,32 @@ export default function HomePage() {
       // ignore
     }
 
-    // Persist to NeonDB database via API route
-    if (token) {
-      try {
-        const res = await fetch('/api/user/saved-properties', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ propertyId: id }),
-        });
+    try {
+      const res = await fetch('/api/user/saved-properties', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ propertyId: id }),
+      });
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          // Revert optimistic state on failure
-          setSavedProperties({ userId: user.id, ids: currentIds });
-          try {
-            localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(currentIds));
-          } catch {
-            // ignore
-          }
-          alert(data.error || 'Failed to update saved property in database. Please try again.');
-        }
-      } catch (err) {
-        console.error('Error persisting saved property to NeonDB:', err);
-        // Revert on network failure
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         setSavedProperties({ userId: user.id, ids: currentIds });
         try {
           localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(currentIds));
         } catch {
           // ignore
         }
+        alert(data.error || 'Failed to update saved property in database. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error persisting saved property to the API:', err);
+      setSavedProperties({ userId: user.id, ids: currentIds });
+      try {
+        localStorage.setItem(`npc_saved_properties_${user.id}`, JSON.stringify(currentIds));
+      } catch {
+        // ignore
       }
     }
   };

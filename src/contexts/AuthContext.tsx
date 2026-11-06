@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
 export interface UserProfile {
   id: string;
@@ -61,90 +61,60 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [inspections, setInspections] = useState<InspectionItem[]>([]);
+  const token = user ? 'cookie-session' : null;
 
-  // Safely hydrate auth state from localStorage after initial render to prevent SSR hydration mismatches
   useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        const storedToken = localStorage.getItem('npc_auth_token');
-        const storedUser = localStorage.getItem('npc_auth_user');
-        if (storedToken) {
-          setToken(storedToken);
+    let isMounted = true;
+
+    try {
+      localStorage.removeItem('npc_auth_token');
+      localStorage.removeItem('npc_auth_user');
+    } catch (error) {
+      console.warn('Could not clear the legacy browser session cache:', error);
+    }
+
+    fetch('/api/auth/me')
+      .then(async (res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data?.authenticated && data.user) {
+          setUser(data.user);
         }
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch {
-        // Ignore localStorage read errors
-      }
-    }, 0);
-    return () => clearTimeout(timer);
+      })
+      .catch((error: unknown) => {
+        if (isMounted) console.warn('Could not restore the signed-in session:', error);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const refreshInspections = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
+
     try {
-      const res = await fetch('/api/inspections', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch('/api/inspections');
       if (res.ok) {
         const data = await res.json();
         setInspections(data.inspections || []);
       }
-    } catch (err) {
-      console.warn('Error fetching inspections:', err);
+    } catch (error) {
+      console.warn('Error fetching inspections:', error);
     }
-  }, [token]);
+  }, [user]);
 
   useEffect(() => {
-    let isMounted = true;
-    if (token) {
-      const timer = setTimeout(() => {
-        if (!isMounted) return;
-
-        fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (!isMounted || !data) return;
-            if (data.authenticated && data.user) {
-              setUser(data.user);
-              localStorage.setItem('npc_auth_user', JSON.stringify(data.user));
-            } else if (data.authenticated === false) {
-              setUser(null);
-              setToken(null);
-              localStorage.removeItem('npc_auth_user');
-              localStorage.removeItem('npc_auth_token');
-            }
-          })
-          .catch(() => {});
-
-        fetch('/api/inspections', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (!isMounted || !data) return;
-            setInspections(data.inspections || []);
-          })
-          .catch(() => {});
-      }, 50);
-
-      return () => {
-        isMounted = false;
-        clearTimeout(timer);
-      };
+    if (user) {
+      void refreshInspections();
+    } else {
+      setInspections([]);
     }
-    return () => {
-      isMounted = false;
-    };
-  }, [token]);
+  }, [user, refreshInspections]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -157,20 +127,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await res.json();
       if (!res.ok) {
-        setLoading(false);
         return { success: false, error: data.error || 'Login failed' };
       }
 
       setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem('npc_auth_user', JSON.stringify(data.user));
-      localStorage.setItem('npc_auth_token', data.token);
-
-      setLoading(false);
       return { success: true };
     } catch {
-      setLoading(false);
       return { success: false, error: 'Network error during login' };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -193,34 +158,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await res.json();
       if (!res.ok) {
-        setLoading(false);
         return { success: false, error: data.error || 'Registration failed' };
       }
 
       setUser(data.user);
-      setToken(data.token);
-      localStorage.setItem('npc_auth_user', JSON.stringify(data.user));
-      localStorage.setItem('npc_auth_token', data.token);
-
-      setLoading(false);
       return { success: true };
     } catch {
-      setLoading(false);
       return { success: false, error: 'Network error during registration' };
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch {
-      // Ignore
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!response.ok) {
+        console.error('The server could not clear the session cookie.');
+      }
+    } catch (error) {
+      console.error('Could not contact the server to clear the session cookie:', error);
     }
+
     setUser(null);
-    setToken(null);
     setInspections([]);
-    localStorage.removeItem('npc_auth_user');
-    localStorage.removeItem('npc_auth_token');
   };
 
   const scheduleInspection = async (data: {
@@ -232,17 +193,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     type: 'PHYSICAL' | 'VIRTUAL_WHATSAPP';
     notes?: string;
   }) => {
-    if (!token) {
+    if (!user) {
       return { success: false, error: 'You must be signed in to book an inspection.' };
     }
 
     try {
       const res = await fetch('/api/inspections', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 

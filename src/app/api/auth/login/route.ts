@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password } = body;
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       return NextResponse.json(
         { error: 'Email and password are required.' },
         { status: 400 }
@@ -47,7 +47,6 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
       message: 'Sign in successful.',
-      token,
       user: safeUser,
     });
 

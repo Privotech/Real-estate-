@@ -130,14 +130,14 @@ export function PropertyAlertModal({
   const [pushEnabled, setPushEnabled] = useState(true);
   const [whatsappEnabled, setWhatsappEnabled] = useState(false);
 
-  const defaultEmail = user?.email || 'privilegeoyegbile@gmail.com';
+  const defaultEmail = user?.email || '';
   const [customEmail, setCustomEmail] = useState<string | null>(null);
   const emailAddress = customEmail !== null ? customEmail : defaultEmail;
 
   // Dedicated toggle to enable/disable daily summary emails for saved search criteria
   const [dailySummaryEmail, setDailySummaryEmail] = useState<boolean>(true);
 
-  const defaultPhone = user?.phone || '+234 803 123 4567';
+  const defaultPhone = user?.phone || '';
   const [customPhone, setCustomPhone] = useState<string | null>(null);
   const phoneNumber = customPhone !== null ? customPhone : defaultPhone;
 
@@ -154,6 +154,13 @@ export function PropertyAlertModal({
 
   // Load alerts directly from NeonDB
   const loadAlertsFromDb = React.useCallback(async () => {
+    if (!user) {
+      setSavedAlerts([]);
+      setLoadingAlerts(false);
+      onAlertsChange?.(0);
+      return;
+    }
+
     try {
       setLoadingAlerts(true);
       const res = await fetch('/api/alerts');
@@ -218,7 +225,7 @@ export function PropertyAlertModal({
     } finally {
       setLoadingAlerts(false);
     }
-  }, [onAlertsChange]);
+  }, [onAlertsChange, user]);
 
   // Safely hydrate browser push permission and fetch NeonDB alerts after mount
   useEffect(() => {
@@ -295,6 +302,11 @@ export function PropertyAlertModal({
   // Save the alert to NeonDB
   const handleSaveAlert = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      alert('Sign in to save and manage property alerts.');
+      return;
+    }
 
     const trimmedEmail = emailAddress.trim();
     if (!trimmedEmail) {

@@ -6,7 +6,10 @@ import { DbUser } from './db';
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    throw new Error('JWT_SECRET must be set in the project-root .env file.');
+    throw new Error('JWT_SECRET must be configured.');
+  }
+  if (secret.length < 32) {
+    throw new Error('JWT_SECRET must contain at least 32 characters.');
   }
   return secret;
 }
@@ -49,13 +52,6 @@ export function verifyToken(token: string): TokenPayload | null {
 }
 
 export function extractAuthUser(req: NextRequest): TokenPayload | null {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    return verifyToken(token);
-  }
-
-  // Also check cookie if provided
   const cookieToken = req.cookies.get('npc_token')?.value;
   if (cookieToken) {
     return verifyToken(cookieToken);
